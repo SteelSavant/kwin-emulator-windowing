@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Name": "Emulator Windowing",
+        "Description": "Manages windows for emulators that have multiple, such as Cemu, Citra, and Dolphin.",
+        "Authors": [
+            {
+                "Email": "steelsavant@gmail.com",
+                "Name": "Ryan Williams"
+            }
+        ],
+        "Id": "emulatorwindowing",
+        "Version": "1.0",
+        "License": "GPLv3",
+        "Website": "https://github.com/steelsavant/deck-ds"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
+}
