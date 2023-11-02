@@ -125,7 +125,6 @@ function assertWindowsValid(windows) {
 function isStandardAspectRatio(geometry) {
     const ratio = geometry.width / geometry.height;
     const common = [16. / 9., 16. / 10., 4. / 3., 21. / 9.];
-    
     return common.some(function (r) { return Math.abs(r - ratio) < 0.001 });
 }
 
@@ -223,16 +222,18 @@ function allOnPrimaryRegions(secondaries) {
 };
 
 function resetPrimaryFullScreen(set, windows) {
-    if (set.priority != 0) {
-        if (windows[0] && windows[0][0]) {
-            const primary = windows[0][0];
-            if (primary.fullScreen != primaryFullScreen) {
-                print("resetting fullscreen to", primaryFullScreen);
-                primary.fullScreen = primaryFullScreen;
+          if (set.priority != 0) {
+                if (windows[0] && windows[0][0]) {
+                    const primary = windows[0][0];
+                    if (primary.fullScreen != primaryFullScreen) {
+                        print("resetting fullscreen to", primaryFullScreen);
+                        primary.fullScreen = primaryFullScreen;
+                    }
+                }
             }
-        }
-    }
 }
+
+
 
 function setClientWindows(set, windows) {
     resetPrimaryFullScreen(set, windows);
@@ -404,12 +405,13 @@ workspace.clientRemoved.connect((client) => {
         resetClient(client);
         delete oldSettings[client];
 
+
         // reconfigure remaining windows
         const set = getAppSet(client);
         const app = set.app;
         const windows = normalClients[app];
 
-        for (scope of windows) {
+        for (scope of windows.filter((f) => f)) {
             const index = scope.indexOf(client);
             if (index > -1) {
                 scope.splice(index, 1);
