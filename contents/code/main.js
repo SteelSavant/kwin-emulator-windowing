@@ -1,3 +1,4 @@
+
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
 print("!!!SCRIPT!!!");
@@ -295,6 +296,7 @@ function setClientWindows(set, windows) {
                 }();
                 if (primaries && primaries[0] && primaries[0].fullScreen) {
                     clientSetFullscreenOn(client, display, region, secondaries.length);
+                    client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
                 } else {
                     resetClient(client);
                     client.fullScreen = false;
@@ -430,5 +432,3 @@ const clients = workspace.clientList();
 for (client of clients) {
     handleClient(client);
 }
-
-
