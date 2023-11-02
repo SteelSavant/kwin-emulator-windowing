@@ -41,7 +41,7 @@ const appSets = {
         classes: ["citra", "citra-qt"], primary: ["Citra", "Primary"], secondary: ["Citra", "Secondary"]
 
     },
-    "Dolphin": { classes: ["dolphin-emu"], primary: ["Dolphin ", " | "], secondary: ["GBA", " | "], },
+    "Dolphin": { classes: ["dolphin-emu"], primary: ["Dolphin", "|"], secondary: ["GBA", " | "], },
 };
 
 
@@ -51,7 +51,7 @@ const appSets = {
 const swapScreens = false;
 
 /// Keep app windows above other windows
-const keepAbove = false;
+const keepAbove = true;
 
 /// policy if a multi-window application has 1 secondary screen
 const singleSecondaryPolicy = MultiWindowPolicy.AllOnSecondary;
@@ -101,6 +101,7 @@ print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientA
 const oldSettings = {};
 
 let primaryFullScreen = false;
+let primaryLock = false;
 
 function resetClient(client) {
     const oldClient = oldSettings[client];
@@ -223,18 +224,16 @@ function allOnPrimaryRegions(secondaries) {
 };
 
 function resetPrimaryFullScreen(set, windows) {
-          if (set.priority != 0) {
-                if (windows[0] && windows[0][0]) {
-                    const primary = windows[0][0];
-                    if (primary.fullScreen != primaryFullScreen) {
-                        print("resetting fullscreen to", primaryFullScreen);
-                        primary.fullScreen = primaryFullScreen;
-                    }
-                }
+    if (set.priority != 0) {
+        if (windows[0] && windows[0][0]) {
+            const primary = windows[0][0];
+            if (primary.fullScreen != primaryFullScreen) {
+                print("resetting fullscreen to", primaryFullScreen);
+                primary.fullScreen = primaryFullScreen;
             }
+        }
+    }
 }
-
-
 
 function setClientWindows(set, windows) {
     resetPrimaryFullScreen(set, windows);
@@ -268,6 +267,8 @@ function setClientWindows(set, windows) {
 
     if (primaries && primaries[0]) {
         const primary = primaries[0];
+
+
         if (primaries.length > 1) {
             print("too many primary windows; using,", primary, "ignoring", primaries.slice(1).map((c) => c.caption));
         }
@@ -278,7 +279,8 @@ function setClientWindows(set, windows) {
     }
 
     if (secondaries) {
-        secondaries.sort((a, b) => { return a < b ? -1 : 1 });
+        secondaries.sort((a, b) => a.caption < b.caption ? -1 : 1);
+
 
         const regions = policy === MultiWindowPolicy.AllOnPrimary ? allOnPrimaryRegions(secondaries) : allOnSecondaryRegions(secondaries);
 
@@ -294,13 +296,13 @@ function setClientWindows(set, windows) {
                             return secondaryDisplay;
                     }
                 }();
-                if (primaries && primaries[0] && primaries[0].fullScreen) {
+                if (primaryFullScreen) {
                     clientSetFullscreenOn(client, display, region, secondaries.length);
                     client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
                 } else {
-                    resetClient(client);
+                    resetClient(client); // reset the geometry
                     client.fullScreen = false;
-                    client.keepAbove = keepAbove;
+                    client.keepAbove = false;
                 }
             } else {
                 print("too many secondary views; ignoring", client.caption);
@@ -315,14 +317,7 @@ function setClientWindows(set, windows) {
             workspace.sendClientToScreen(client, secondaryDisplay);
             client.fullScreen = false;
             client.setMaximize(true, true);
-
-            if (keepAbove) {
-                if (!secondaries || policy === MultiWindowPolicy.AllOnPrimary) {
-                    client.keepAbove = true;
-                } else {
-                    client.keepAbove = false;
-                }
-            }
+            client.keepAbove = keepAbove && (!primaryFullScreen || !secondaries || policy === MultiWindowPolicy.AllOnPrimary);
         }
     }
 
@@ -372,9 +367,11 @@ function handleClient(client) {
             primaryFullScreen = client.fullScreen;
 
             client.fullScreenChanged.connect(() => {
-                primaryFullScreen = client.fullScreen;
-                print(client.caption, "now fullscreen:", client.fullScreen);
-                setClientWindows(set, normalClients[app]);
+                if (!primaryLock) {
+                    primaryFullScreen = client.fullScreen;
+                    print(client.caption, "now fullscreen:", client.fullScreen);
+                    setClientWindows(set, normalClients[app]);
+                }
             });
         }
 
@@ -403,6 +400,7 @@ function handleClient(client) {
 workspace.clientAdded.connect(handleClient);
 workspace.clientRemoved.connect((client) => {
     if (client in oldSettings) {
+        primaryLock = true;
         // reset client; things will break otherwise
         resetClient(client);
         delete oldSettings[client];
@@ -420,11 +418,10 @@ workspace.clientRemoved.connect((client) => {
             }
         }
         normalClients[app] = windows;
-        print(client.caption, "removed, remaining:", windows.map((w) => w.caption));
+        print(client.caption, "removed, remaining:", windows.map((s) => s.map((w) => w.caption)));
         assertWindowsValid(windows);
+        primaryLock = false;
         setClientWindows(set, windows);
-
-
     }
 })
 
