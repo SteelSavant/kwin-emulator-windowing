@@ -437,11 +437,11 @@ workspace.clientRemoved.connect((client) => {
         const app = set.app;
         const windows = normalClients[app];
 
-        const primaries = windows[0];
-        if(primaries && primaries[0] && inRemoveWindow(true)) {
-            print("setting fullscreen to former value from remove window change");
-            primaries[0].fullScreen = oldPrimaryFullScreen;
-        }
+        // const primaries = windows[0];
+        // if(primaries && primaries[0] && inRemoveWindow(true)) {
+        //     print("setting fullscreen to former value from remove window change");
+        //     primaries[0].fullScreen = oldPrimaryFullScreen;
+        // }
 
         for (scope of windows.filter((f) => f)) {
             const index = scope.indexOf(client);
