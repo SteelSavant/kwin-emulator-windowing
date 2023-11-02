@@ -6,6 +6,7 @@ print("!!!SCRIPT!!!");
 // TODO::this script is fairly naive about which screen should be selected; it just picks the smallest and largest.
 // Consider reading the screens names (as reported by qdbus org.kde.KWin /KWin supportInformation, and possibly workspace.supportInformation()), and using dbus queries to get the ids.
 
+
 // Constants
 
 const Region = {
@@ -36,12 +37,21 @@ const MultiWindowPolicy = {
 
 // TODO::the selectors should probably be regex, and be configurable (primary vs secondary)
 const appSets = {
-    "Cemu": { classes: ["cemu", "cemu_relwithdebinfo"], primary: ["Cemu"], secondary: ["GamePad View"], },
-    "Citra": {
-        classes: ["citra", "citra-qt"], primary: ["Citra", "Primary"], secondary: ["Citra", "Secondary"]
-
+    "Cemu": {
+        classes: ["cemu", "cemu_relwithdebinfo"],
+        primary: /^Cemu/,
+        secondary: /^GamePad View/,
     },
-    "Dolphin": { classes: ["dolphin-emu"], primary: ["Dolphin", "|"], secondary: ["GBA", " | "], },
+    "Citra": {
+        classes: ["citra", "citra-qt"],
+        primary: /^Citra.*Primary/,
+        secondary: /^Citra.*Secondary/
+    },
+    "Dolphin": {
+        classes: ["dolphin-emu"],
+        primary: /^Dolphin$|^(Dolphin.*\|)/,
+        secondary: /^GBA\d+/,
+    },
 };
 
 
@@ -329,10 +339,11 @@ function setClientWindows(set, windows) {
 normalClients = {};
 
 function getAppSet(client) {
-    const caption = client.caption.toLowerCase();
+    const caption = client.caption;
     for (set in appSets) {
-        const matchesPrimary = appSets[set].primary.every((str) => { return caption.includes(str.toLowerCase()); });
-        const matchesSecondary = appSets[set].secondary.every(function (str) { return caption.includes(str.toLowerCase()); });
+
+        const matchesPrimary = appSets[set].primary.test(caption);
+        const matchesSecondary = appSets[set].secondary.test(caption);
         const windowClass = client.resourceClass.toString();
         if (appSets[set].classes.some((wc) => { return wc === windowClass; })) {
             const res = {
