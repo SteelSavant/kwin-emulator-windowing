@@ -111,7 +111,7 @@ print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientA
 const oldSettings = {};
 
 let primaryFullScreen = false;
-let primaryLock = false;
+let oldPrimaryFullScreen = false;
 
 function resetClient(client) {
     const oldClient = oldSettings[client];
@@ -278,7 +278,6 @@ function setClientWindows(set, windows) {
     if (primaries && primaries[0]) {
         const primary = primaries[0];
 
-
         if (primaries.length > 1) {
             print("too many primary windows; using,", primary, "ignoring", primaries.slice(1).map((c) => c.caption));
         }
@@ -290,7 +289,6 @@ function setClientWindows(set, windows) {
 
     if (secondaries) {
         secondaries.sort((a, b) => a.caption < b.caption ? -1 : 1);
-
 
         const regions = policy === MultiWindowPolicy.AllOnPrimary ? allOnPrimaryRegions(secondaries) : allOnSecondaryRegions(secondaries);
 
@@ -327,13 +325,9 @@ function setClientWindows(set, windows) {
             workspace.sendClientToScreen(client, secondaryDisplay);
             client.fullScreen = false;
             client.setMaximize(true, true);
-            client.keepAbove = keepAbove && (!primaryFullScreen || !secondaries || policy === MultiWindowPolicy.AllOnPrimary);
+            client.keepAbove =  keepAbove && (!primaryFullScreen || !secondaries || policy === MultiWindowPolicy.AllOnPrimary);
         }
     }
-
-
-
-
 }
 
 normalClients = {};
@@ -376,9 +370,14 @@ function handleClient(client) {
         if (set.priority === 0) {
             print("attaching fullscreen listener to primary window");
             primaryFullScreen = client.fullScreen;
+            oldPrimaryFullScreen = primaryFullScreen;
 
             client.fullScreenChanged.connect(() => {
-                if (!primaryLock) {
+                if(!client.fullScreen && inRemoveWindow(false) && primaryFullScreen) {
+                    print("setting fullscreen to former value from fullscreen change");
+                    client.fullScreen = primaryFullScreen;
+                } else {
+                    oldPrimaryFullScreen = primaryFullScreen;
                     primaryFullScreen = client.fullScreen;
                     print(client.caption, "now fullscreen:", client.fullScreen);
                     setClientWindows(set, normalClients[app]);
@@ -394,33 +393,55 @@ function handleClient(client) {
             let windows = normalClients[app];
             let scope = windows[set.priority];
 
-            print("current windows:", windows);
+            // print("current windows:", windows);
 
             windows[set.priority] = scope ? [...scope, client] : [client];
             normalClients[app] = windows;
-            print(client.caption, "added:", windows);
+            // print(client.caption, "added:", windows);
 
             assertWindowsValid(windows);
 
             setClientWindows(set, windows);
         }
-
     }
+}
+
+let fullScreenTime = new Date("1969-12-29");
+let removeTime = new Date("1969-12-29");
+
+function inRemoveWindow(forRemove) {
+    const now = new Date();
+    if(forRemove) {
+        removeTime = now;
+    } else {
+        fullScreenTime = now;
+    }
+
+    const diff = Math.abs(fullScreenTime - removeTime) ;
+    const tooClose = diff < 100;
+
+    print("difference of", diff, "at", now, "is too close:", tooClose, "from remove", forRemove);
+
+    return tooClose;
 }
 
 workspace.clientAdded.connect(handleClient);
 workspace.clientRemoved.connect((client) => {
     if (client in oldSettings) {
-        primaryLock = true;
         // reset client; things will break otherwise
         resetClient(client);
         delete oldSettings[client];
-
 
         // reconfigure remaining windows
         const set = getAppSet(client);
         const app = set.app;
         const windows = normalClients[app];
+
+        const primaries = windows[0];
+        if(primaries && primaries[0] && inRemoveWindow(true)) {
+            print("setting fullscreen to former value from remove window change");
+            primaries[0].fullScreen = oldPrimaryFullScreen;
+        }
 
         for (scope of windows.filter((f) => f)) {
             const index = scope.indexOf(client);
@@ -429,9 +450,8 @@ workspace.clientRemoved.connect((client) => {
             }
         }
         normalClients[app] = windows;
-        print(client.caption, "removed, remaining:", windows.map((s) => s.map((w) => w.caption)));
+        // print(client.caption, "removed, remaining:", windows.map((s) => s.map((w) => w.caption)));
         assertWindowsValid(windows);
-        primaryLock = false;
         setClientWindows(set, windows);
     }
 })
