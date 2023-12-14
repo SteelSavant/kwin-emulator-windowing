@@ -6,7 +6,6 @@ print("!!!SCRIPT!!!");
 // TODO::this script is fairly naive about which screen should be selected; it just picks the smallest and largest.
 // Consider reading the screens names (as reported by qdbus org.kde.KWin /KWin supportInformation, and possibly workspace.supportInformation()), and using dbus queries to get the ids.
 
-
 // Constants
 
 const Region = {
@@ -39,6 +38,11 @@ const MultiWindowPolicy = {
 const appSets = {
     "Cemu": {
         classes: ["cemu", "cemu_relwithdebinfo"],
+        primary: /^Cemu/,
+        secondary: /^GamePad View/,
+    },
+    "Cemu (Proton)": {
+        classes: ["steam_app_"],
         primary: /^Cemu/,
         secondary: /^GamePad View/,
     },
@@ -325,7 +329,7 @@ function setClientWindows(set, windows) {
             workspace.sendClientToScreen(client, secondaryDisplay);
             client.fullScreen = false;
             client.setMaximize(true, true);
-            client.keepAbove =  keepAbove && (!primaryFullScreen || !secondaries || policy === MultiWindowPolicy.AllOnPrimary);
+            client.keepAbove = keepAbove && (!primaryFullScreen || !secondaries || policy === MultiWindowPolicy.AllOnPrimary);
         }
     }
 }
@@ -334,12 +338,12 @@ normalClients = {};
 
 function getAppSet(client) {
     const caption = client.caption;
-    for (set in appSets) {
+    const windowClass = client.resourceClass.toString();
 
+    for (set in appSets) {
         const matchesPrimary = appSets[set].primary.test(caption);
         const matchesSecondary = appSets[set].secondary.test(caption);
-        const windowClass = client.resourceClass.toString();
-        if (appSets[set].classes.some((wc) => { return wc === windowClass; })) {
+        if (appSets[set].classes.some((wc) => { return windowClass.includes(wc); })) {
             const res = {
                 app: set,
                 // 0 is primary window, 1 is secondary window, 2 is other
@@ -373,7 +377,7 @@ function handleClient(client) {
             oldPrimaryFullScreen = primaryFullScreen;
 
             client.fullScreenChanged.connect(() => {
-                if(!client.fullScreen && inRemoveWindow(false) && primaryFullScreen) {
+                if (!client.fullScreen && inRemoveWindow(false) && primaryFullScreen) {
                     print("setting fullscreen to former value from fullscreen change");
                     client.fullScreen = primaryFullScreen;
                 } else {
@@ -411,19 +415,30 @@ let removeTime = new Date("1969-12-29");
 
 function inRemoveWindow(forRemove) {
     const now = new Date();
-    if(forRemove) {
+    if (forRemove) {
         removeTime = now;
     } else {
         fullScreenTime = now;
     }
 
-    const diff = Math.abs(fullScreenTime - removeTime) ;
+    const diff = Math.abs(fullScreenTime - removeTime);
     const tooClose = diff < 100;
-
-    print("difference of", diff, "at", now, "is too close:", tooClose, "from remove", forRemove);
 
     return tooClose;
 }
+
+// taken from https://github.com/wsdfhjxc/kwin-scripts/blob/master/experimental/experimental.js
+function delay(milliseconds, callbackFunc) {
+    var timer = new QTimer();
+    timer.timeout.connect(function () {
+        timer.stop();
+        callbackFunc();
+    });
+    timer.start(milliseconds);
+    return timer;
+}
+
+let removeId = 0;
 
 workspace.clientAdded.connect(handleClient);
 workspace.clientRemoved.connect((client) => {
@@ -433,9 +448,22 @@ workspace.clientRemoved.connect((client) => {
         delete oldSettings[client];
 
         // reconfigure remaining windows
-        const set = getAppSet(client);
-        const app = set.app;
-        const windows = normalClients[app];
+        const app = getAppSet(client);
+        const name = app.app;
+        const windows = normalClients[name];
+
+        const primaries = windows[0];
+        const thisRemove = ++removeId;
+        if (primaries && primaries[0] && inRemoveWindow(true)) {
+            const primary = primaries[0];
+            delay(1000, () => {
+                const currentWindows = normalClients[name];
+                if (thisRemove == removeId && currentWindows && currentWindows[0] && currentWindows[0][0] == primary) {
+                    print("setting fullscreen to former value from remove window change");
+                    primary.fullScreen = oldPrimaryFullScreen;
+                }
+            });
+        }
 
         // const primaries = windows[0];
         // if(primaries && primaries[0] && inRemoveWindow(true)) {
@@ -449,7 +477,7 @@ workspace.clientRemoved.connect((client) => {
                 scope.splice(index, 1);
             }
         }
-        normalClients[app] = windows;
+        normalClients[name] = windows;
         // print(client.caption, "removed, remaining:", windows.map((s) => s.map((w) => w.caption)));
         assertWindowsValid(windows);
         setClientWindows(set, windows);
@@ -458,5 +486,6 @@ workspace.clientRemoved.connect((client) => {
 
 const clients = workspace.clientList();
 for (client of clients) {
+    print('handling client', client.caption, 'with class', client.resourceClass.toString())
     handleClient(client);
 }
