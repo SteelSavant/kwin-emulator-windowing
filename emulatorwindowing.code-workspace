@@ -1,0 +1,99 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Shell",
+				"command": "${command:workbench.action.terminal.new}",
+				"presentation": {
+					"group": "startup",
+					"echo": false
+				},
+				"isBackground": true
+			},
+			{
+				"label": "Watch Logs",
+				"type": "shell",
+				"command": "journalctl -g \"js:\" -f",
+				"presentation": {
+					"group": "startup",
+					"echo": false
+				},
+				"isBackground": true
+			},
+			{
+				"label": "Startup",
+				"runOptions": {
+					"runOn": "folderOpen"
+				},
+				"dependsOn": [
+					"Shell",
+					"Watch Logs"
+				],
+				"dependsOrder": "parallel"
+			},
+			{
+				"label": "Uninstall",
+				"type": "shell",
+				"command": "kpackagetool5 -r /home/deck/.local/share/kwin/scripts/emulatorwindowing",
+				"isBackground": true
+			},
+			{
+				"label": "Install",
+				"type": "shell",
+				"command": "kpackagetool5 -i ../emulatorwindowing.kwinscript",
+				"isBackground": true
+			},
+			{
+				"label": "Enable",
+				"type": "shell",
+				"command": "kwriteconfig5 --file kwinrc --group Plugins --key emulatorwindowingEnabled true"
+			},
+			{
+				"label": "Disable",
+				"type": "shell",
+				"command": "kwriteconfig5 --file kwinrc --group Plugins --key emulatorwindowingEnabled false"
+			},
+			{
+				"label": "Zip",
+				"type": "shell",
+				"command": "rm -f ../emulatorwindowing.kwinscript && zip -r ../emulatorwindowing.kwinscript ."
+			},
+			{
+				"label": "Reconfigure",
+				"type": "shell",
+				"command": "qdbus org.kde.KWin /KWin reconfigure",
+				"isBackground": true
+			},
+			{
+				"label": "Full Install",
+				"dependsOn": [
+					"Zip",
+					"Install",
+					"Reconfigure",
+					"Enable",
+					"Reconfigure"
+				],
+				"dependsOrder": "sequence"
+			},
+			{
+				"label": "Full Reinstall",
+				"dependsOn": [
+					"Disable",
+					"Reconfigure",
+					"Uninstall",
+					"Reconfigure",
+					"Full Install"
+				],
+				"dependsOrder": "sequence",
+				"problemMatcher": []
+			}
+		]
+	}
+}
