@@ -41,24 +41,24 @@
 			{
 				"label": "Uninstall",
 				"type": "shell",
-				"command": "kpackagetool5 -r /home/deck/.local/share/kwin/scripts/emulatorwindowing",
+				"command": "kpackagetool5 -r /home/deck/.local/share/kwin/scripts/emulatorwindowing && sleep 2 && qdbus org.kde.KWin /KWin reconfigure && sleep 2",
 				"isBackground": true
 			},
 			{
 				"label": "Install",
 				"type": "shell",
-				"command": "kpackagetool5 -i ../emulatorwindowing.kwinscript",
+				"command": "kpackagetool5 -i ../emulatorwindowing.kwinscript && sleep 2 && qdbus org.kde.KWin /KWin reconfigure && sleep 2",
 				"isBackground": true
 			},
 			{
 				"label": "Enable",
 				"type": "shell",
-				"command": "kwriteconfig5 --file kwinrc --group Plugins --key emulatorwindowingEnabled true"
+				"command": "kwriteconfig5 --file kwinrc --group Plugins --key emulatorwindowingEnabled true && sleep 2 && qdbus org.kde.KWin /KWin reconfigure && sleep 2"
 			},
 			{
 				"label": "Disable",
 				"type": "shell",
-				"command": "kwriteconfig5 --file kwinrc --group Plugins --key emulatorwindowingEnabled false"
+				"command": "kwriteconfig5 --file kwinrc --group Plugins --key emulatorwindowingEnabled false && sleep 2 && qdbus org.kde.KWin /KWin reconfigure && sleep 2"
 			},
 			{
 				"label": "Zip",
@@ -66,19 +66,11 @@
 				"command": "rm -f ../emulatorwindowing.kwinscript && zip -r ../emulatorwindowing.kwinscript ."
 			},
 			{
-				"label": "Reconfigure",
-				"type": "shell",
-				"command": "qdbus org.kde.KWin /KWin reconfigure",
-				"isBackground": true
-			},
-			{
 				"label": "Full Install",
 				"dependsOn": [
 					"Zip",
 					"Install",
-					"Reconfigure",
 					"Enable",
-					"Reconfigure"
 				],
 				"dependsOrder": "sequence"
 			},
@@ -86,9 +78,7 @@
 				"label": "Full Reinstall",
 				"dependsOn": [
 					"Disable",
-					"Reconfigure",
 					"Uninstall",
-					"Reconfigure",
 					"Full Install"
 				],
 				"dependsOrder": "sequence",

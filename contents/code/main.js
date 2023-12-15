@@ -1,7 +1,7 @@
 
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
-print("!!!SCRIPT!!!");
+print("!!!KWINSCRIPT!!!");
 
 // TODO::this script is fairly naive about which screen should be selected; it just picks the smallest and largest.
 // Consider reading the screens names (as reported by qdbus org.kde.KWin /KWin supportInformation, and possibly workspace.supportInformation()), and using dbus queries to get the ids.
@@ -68,9 +68,9 @@ const swapScreens = false;
 const keepAbove = true;
 
 /// policy if a multi-window application has 1 secondary screen
-const singleSecondaryPolicy = MultiWindowPolicy.AllOnSecondary;
+const singleSecondaryPolicyOption = MultiWindowPolicy.AllOnSecondary;
 /// policy if a multi-window application has 2+ secondary screens
-const multiSecondaryPolicy = MultiWindowPolicy.AllOnPrimary;
+const multiSecondaryPolicyOption = MultiWindowPolicy.AllOnPrimary;
 
 /// Number of secondary windows expected in multi-window applications (used for tiling)
 const expectedMultiWindowCount = 4;
@@ -78,39 +78,57 @@ const secondaryWindowAspectRatio = 3 / 2;
 
 // Script logic
 
-const screens = workspace.numScreens;
-assert(screens > 1, "Multi-Window Fullscreen requires multiple displays");
-
+/// policy if a multi-window application has 1 secondary screen
+let singleSecondaryPolicy = singleSecondaryPolicyOption;
+/// policy if a multi-window application has 2+ secondary screens
+let multiSecondaryPolicy = multiSecondaryPolicyOption;
 let primaryDisplay = 0;
 let secondaryDisplay = 0;
 
-for (let i = 0; i < screens; i++) {
-    const currentScreen = i;
-
-    const currentDimensions = workspace.clientArea(workspace.MaximizeArea, currentScreen, 1);
-    const primaryDimensions = workspace.clientArea(workspace.MaximizeArea, primaryDisplay, 1);
-    const secondaryDimensions = workspace.clientArea(workspace.MaximizeArea, secondaryDisplay, 1);
-
-    // Compare screen dimensions
-    if (currentDimensions.height * currentDimensions.width > primaryDimensions.height * primaryDimensions.width) {
-        primaryDisplay = currentScreen;
+function setScreens(screens) {
+    const actualScreens = workspace.numScreens;
+    if (screens != actualScreens) {
+        delay(500, () => {
+            const screens = workspace.numScreens;
+            setScreens(screens);
+        })
     }
 
-    if (currentDimensions.height * currentDimensions.width < secondaryDimensions.height * secondaryDimensions.width) {
-        secondaryDisplay = currentScreen;
+    print("Configuring screens");
+
+    for (let i = 0; i < screens; i++) {
+        const currentScreen = i;
+
+        const currentDimensions = workspace.clientArea(workspace.MaximizeArea, currentScreen, 1);
+        const primaryDimensions = workspace.clientArea(workspace.MaximizeArea, primaryDisplay, 1);
+        const secondaryDimensions = workspace.clientArea(workspace.MaximizeArea, secondaryDisplay, 1);
+
+        // Compare screen dimensions
+        if (currentDimensions.height * currentDimensions.width > primaryDimensions.height * primaryDimensions.width) {
+            primaryDisplay = currentScreen;
+        }
+
+        if (currentDimensions.height * currentDimensions.width < secondaryDimensions.height * secondaryDimensions.width) {
+            secondaryDisplay = currentScreen;
+        }
+    }
+
+    if (swapScreens) {
+        const tmp = primaryDisplay;
+        primaryDisplay = secondaryDisplay;
+        secondaryDisplay = tmp;
+    }
+
+    print("primary display: ", primaryDisplay, ", geometry: ", workspace.clientArea(workspace.MaximizeArea, primaryDisplay, 1));
+    print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientArea(workspace.MaximizeArea, secondaryDisplay, 1));
+
+    normalClients = {};
+    const clients = workspace.clientList();
+    for (client of clients) {
+        print('handling client', client.caption, 'with class', client.resourceClass.toString())
+        handleClient(client);
     }
 }
-
-if (swapScreens) {
-    const tmp = primaryDisplay;
-    primaryDisplay = secondaryDisplay;
-    secondaryDisplay = tmp;
-}
-
-print("primary display: ", primaryDisplay, ", geometry: ", workspace.clientArea(workspace.MaximizeArea, primaryDisplay, 1));
-print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientArea(workspace.MaximizeArea, secondaryDisplay, 1));
-
-
 
 const oldSettings = {};
 
@@ -249,7 +267,23 @@ function resetPrimaryFullScreen(set, windows) {
     }
 }
 
+function setWindowPolicy() {
+    const screens = workspace.numScreens;
+    print('setting window policy with ', screens, 'screens.');
+
+    if (screens === 1) {
+        singleSecondaryPolicy = MultiWindowPolicy.AllOnPrimary;
+        multiSecondaryPolicy = MultiWindowPolicy.AllOnPrimary
+    } else {
+        singleSecondaryPolicy = singleSecondaryPolicyOption;
+        multiSecondaryPolicy = multiSecondaryPolicyOption;
+    }
+
+    print('single:', singleSecondaryPolicy, 'multiple:', multiSecondaryPolicy);
+}
+
 function setClientWindows(set, windows) {
+    setWindowPolicy();
     resetPrimaryFullScreen(set, windows);
 
     const app = set.app;
@@ -487,8 +521,17 @@ workspace.clientRemoved.connect((client) => {
     }
 })
 
-const clients = workspace.clientList();
-for (client of clients) {
-    print('handling client', client.caption, 'with class', client.resourceClass.toString())
-    handleClient(client);
-}
+workspace.numberScreensChanged.connect((count) => {
+    delay(2000, () => setScreens(count));
+});
+
+workspace.screenResized.connect((screen) => {
+    if (primaryDisplay === screen || secondaryDisplay === screen) {
+        const screens = workspace.numScreens;
+
+        delay(500, () => setScreens(screens));
+    }
+})
+
+const screens = workspace.numScreens;
+setScreens(screens);
