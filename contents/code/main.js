@@ -352,6 +352,8 @@ function getAppSet(client) {
 
             print("matched", caption, "with", res.app, "priority", res.priority);
             return res;
+        } else {
+            print(client.caption, 'with class', windowClass, 'not matched; ignoring')
         }
     }
     return null;
