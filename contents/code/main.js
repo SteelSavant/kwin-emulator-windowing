@@ -85,9 +85,9 @@ let multiSecondaryPolicy = multiSecondaryPolicyOption;
 let primaryDisplay = 0;
 let secondaryDisplay = 0;
 
-function setScreens(screens) {
+function setScreens(screenCount) {
     const actualScreens = workspace.numScreens;
-    if (screens != actualScreens) {
+    if (screenCount != actualScreens) {
         delay(500, () => {
             const screens = workspace.numScreens;
             setScreens(screens);
@@ -96,7 +96,7 @@ function setScreens(screens) {
 
     print("Configuring screens");
 
-    for (let i = 0; i < screens; i++) {
+    for (let i = 0; i < screenCount; i++) {
         const currentScreen = i;
 
         const currentDimensions = workspace.clientArea(workspace.MaximizeArea, currentScreen, 1);
@@ -163,7 +163,7 @@ function isStandardAspectRatio(geometry) {
 }
 
 function clientSetFullscreenOn(client, screen, region, secondaryCount) {
-    print("sending", client.caption, "to display", secondaryDisplay, region);
+    print("sending", client.caption, "to display", screen, region);
 
     // save old settings; failing to re-apply them breaks things (specifically Cemu)
     const geometry = workspace.clientArea(workspace.ScreenArea, screen, workspace.currentDesktop);
@@ -217,8 +217,7 @@ function clientSetFullscreenOn(client, screen, region, secondaryCount) {
         geometry.width = squishedWidth;
     }
 
-    // fullscreen settings
-    workspace.sendClientToScreen(client, screen);
+    /// fullscreen settings
 
     if (![Region.Full, Region.Squish].some((r) => r === region)) {
         client.fullScreen = true;
@@ -228,6 +227,11 @@ function clientSetFullscreenOn(client, screen, region, secondaryCount) {
         client.keepAbove = true;
     }
     client.geometry = geometry;
+
+    // Cemu (Proton) won't choose the correct screen without delay
+    delay(10, () => {
+        workspace.sendClientToScreen(client, screen);
+    })
 }
 
 function allOnSecondaryRegions(secondaries) {
