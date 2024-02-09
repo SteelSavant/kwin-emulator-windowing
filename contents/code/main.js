@@ -8,53 +8,54 @@ print("!!!KWINSCRIPT!!!");
 
 // Constants
 
-const Region = {
-    // fullscreen
-    Full: "full",
-    // Multi-window on secondary
-    LeftHalf: "left-half",
-    RightHalf: "right-half",
-    UpperHalf: "upper-half",
-    LowerHalf: "lower-half",
-    UpperLeft: "upper-left",
-    UpperRight: "upper-right",
-    LowerLeft: "lower-left",
-    LowerRight: "lower-right",
-    // Multi-window on primary
-    Squish: "squish", // primary view fullscreen, squished to allow secondaries next to it
-    Slot0: "slot0",
-    Slot1: "slot1",
-    Slot2: "slot2",
-    Slot3: "slot3",
+const Layout = {
+    Separate: 'separate', // primary fullscreen, secondaries on secondary screen,
+    SquareLeft: 'square-left', // secondaries in a square left of primary
+    SquareRight: 'square-right', // secondaries in a square right of primary
+    ColumnLeft: 'column-left', // secondaries in a column left of primary
+    ColumnRight: 'column-right', // secondaries in a column right of primary
 }
 
-const MultiWindowPolicy = {
-    AllOnPrimary: "primary",
-    AllOnSecondary: "secondary",
-}
-
-
-// TODO::the selectors should probably be regex, and be configurable (primary vs secondary)
 const appSets = {
     "Cemu": {
         classes: ["cemu", "cemu_relwithdebinfo"],
         primary: /^Cemu/,
         secondary: /^GamePad View/,
+        settings: {
+            secondaryWindowAspectRatio: 16 / 9,
+            singleScreenLayout: Layout.ColumnRight,
+            multiScreenLayout: Layout.Separate,
+        }
     },
     "Cemu (Proton)": {
         classes: ["steam_app_"],
         primary: /^Cemu/,
         secondary: /^GamePad View/,
+        settings: {
+            secondaryWindowAspectRatio: 16 / 9,
+            singleScreenLayout: Layout.ColumnRight,
+            multiScreenLayout: Layout.Separate,
+        }
     },
     "Citra": {
         classes: ["citra", "citra-qt"],
         primary: /^Citra((?!Secondary).)*|((?!Secondary).)*/,
-        secondary: /^Citra.*Secondary/
+        secondary: /^Citra.*Secondary/,
+        settings: {
+            secondaryWindowAspectRatio: 4 / 3,
+            singleScreenLayout: Layout.ColumnRight,
+            multiScreenLayout: Layout.Separate,
+        }
     },
     "Dolphin": {
         classes: ["dolphin-emu"],
         primary: /^Dolphin$|^(Dolphin.*\|)/,
         secondary: /^GBA\d+/,
+        settings: {
+            secondaryWindowAspectRatio: 3 / 2,
+            singleScreenLayout: Layout.SquareRight,
+            multiScreenLayout: Layout.Separate,
+        }
     },
 };
 
@@ -67,21 +68,9 @@ const swapScreens = false;
 /// Keep app windows above other windows
 const keepAbove = true;
 
-/// policy if a multi-window application has 1 secondary screen
-const singleSecondaryPolicyOption = MultiWindowPolicy.AllOnSecondary;
-/// policy if a multi-window application has 2+ secondary screens
-const multiSecondaryPolicyOption = MultiWindowPolicy.AllOnPrimary;
-
-/// Number of secondary windows expected in multi-window applications (used for tiling)
-const expectedMultiWindowCount = 4;
-const secondaryWindowAspectRatio = 3 / 2;
 
 // Script logic
 
-/// policy if a multi-window application has 1 secondary screen
-let singleSecondaryPolicy = singleSecondaryPolicyOption;
-/// policy if a multi-window application has 2+ secondary screens
-let multiSecondaryPolicy = multiSecondaryPolicyOption;
 let primaryDisplay = 0;
 let secondaryDisplay = 0;
 
@@ -162,14 +151,18 @@ function isStandardAspectRatio(geometry) {
     return common.some(function (r) { return Math.abs(r - ratio) < 0.001 });
 }
 
-function clientSetFullscreenOn(client, screen, region, secondaryCount) {
-    print("sending", client.caption, "to display", screen, region);
+function clientSetFullscreenOn(client, settings, index, secondaryCount) {
+    const layout = workspace.numScreens === 1
+        ? settings.singleScreenLayout
+        : settings.multiScreenLayout;
 
     // save old settings; failing to re-apply them breaks things (specifically Cemu)
+    const [screen, otherScreen] = index === 0 || layout != Layout.Separate
+        ? [primaryDisplay, secondaryDisplay]
+        : [secondaryDisplay, primaryDisplay];
+
     const geometry = workspace.clientArea(workspace.ScreenArea, screen, workspace.currentDesktop);
 
-    // handle covering taskbar/safearea
-    const otherScreen = screen === primaryDisplay ? secondaryDisplay : primaryDisplay;
     const otherGeometry = workspace.clientArea(workspace.ScreenArea, otherScreen, workspace.currentDesktop);
     const diff = workspace.workspaceHeight - geometry.height - otherGeometry.height;
     if (diff > 0.1 && !isStandardAspectRatio(geometry)) {
@@ -177,49 +170,113 @@ function clientSetFullscreenOn(client, screen, region, secondaryCount) {
         geometry.height += diff;
     }
 
-    // If left/right view, halve width
-    if (["left", "right"].some((r) => { return region.includes(r); })) {
-        geometry.width /= 2;
+    let maxSecondaryWidth = geometry.width / 2;
+
+    // swap layout engine where possible to simplify logic
+    if (index > 0) {
+        if (secondaryCount < 3) {
+            if (layout === Layout.SquareLeft) {
+                layout = Layout.ColumnLeft;
+            } else if (layout === Layout.SquareRight) {
+                layout = Layout.ColumnRight;
+            }
+        }
+    } else if (secondaryCount === 0) {
+        layout = Layout.Separate;
     }
 
-    // if top/bottom view, halve height
-    if (["upper", "lower"].some((r) => { return region.includes(r); })) {
-        geometry.height /= 2;
-    }
+    switch (layout) {
+        case Layout.Separate:
+            if (index > 0) {
+                const height = secondaryCount > 2
+                    ? geometry.height / 2
+                    : geometry.height
+                const width = secondaryCount > 1
+                    ? geometry.width / 2
+                    : geometry.width;
 
-    // move left boundary if necessary
-    if (region.includes("right")) {
-        geometry.x += geometry.width;
-    }
+                if (index % 2 === 0) {
+                    geometry.x += width;
+                }
 
-    // move top boundary if necessary
-    if (region.includes("lower")) {
-        geometry.y += geometry.height;
-    }
+                if (index === 3 && secondaryCount === 3) {
+                    geometry.x += width / 2;
+                }
 
+                if (index > 2) {
+                    geometry.y += height;
+                }
 
-    const slotHeight = geometry.height / 4;
-    const slotWidth = secondaryWindowAspectRatio * slotHeight;
-    const squishedWidth = geometry.width - slotWidth;
+                geometry.width = width;
+                geometry.height = height;
+            }
+            break;
+        case Layout.ColumnLeft:
+        case Layout.ColumnRight: {
+            let secondaryHeight = geometry.height / secondaryCount;
+            let secondaryWidth = settings.secondaryWindowAspectRatio * secondaryHeight;
+            secondaryWidth = Math.min(maxSecondaryWidth, secondaryWidth);
+            secondaryHeight = (1 / settings.secondaryWindowAspectRatio) * secondaryWidth;
 
-    // handle slots if squished
-    if (region.includes("slot")) {
-        geometry.x += squishedWidth;
-        geometry.width = slotWidth;
+            if (index === 0) {
+                if (layout === Layout.ColumnLeft) {
+                    geometry.x += secondaryWidth;
+                }
+                geometry.width -= secondaryWidth;
 
-        geometry.height = slotHeight;
+            } else if (index > 0) {
+                if (layout === Layout.ColumnRight) {
+                    geometry.x += geometry.width - secondaryWidth;
+                }
+                const slot = index - 1;
+                geometry.y += slot * secondaryHeight;
 
-        const slot = parseInt(region[4]);
-        geometry.y += slot * geometry.height;
-    }
+                geometry.width = secondaryWidth;
+                geometry.height = secondaryHeight;
+            }
+        }
+            break;
+        case Layout.SquareLeft:
+        case Layout.SquareRight: {
+            // guaranteed to have at least 3, since we demote layout to column otherwise
 
-    if (region === Region.Squish) {
-        geometry.width = squishedWidth;
-    }
+            const secondaryHeight = geometry.height / 2
+            const secondaryWidth = settings.secondaryWindowAspectRatio * secondaryHeight;
+            secondaryWidth = Math.min(maxSecondaryWidth, secondaryWidth);
+            secondaryHeight = (1 / settings.secondaryWindowAspectRatio) * secondaryWidth;
+
+            if (index === 0) {
+                if (layout === Layout.ColumnLeft) {
+                    geometry.x += secondaryWidth * 2;
+                }
+                geometry.width -= secondaryWidth * 2;
+            } else {
+                if (index % 2 === 0) {
+                    geometry.x += secondaryWidth;
+                }
+
+                if (index === 3 && secondaryCount === 3) {
+                    geometry.x += secondaryWidth / 2;
+                }
+
+                if (index > 2) {
+                    geometry.y += secondaryHeight;
+                }
+
+                if (layout === Layout.ColumnRight) {
+                    const primaryWidth = geometry.width - (secondaryWidth * 2);
+                    geometry.x += primaryWidth;
+                }
+
+                geometry.width = secondaryWidth;
+                geometry.height = secondaryHeight;
+            }
+            break;
+        }
+    };
 
     /// fullscreen settings
-
-    if (![Region.Full, Region.Squish].some((r) => r === region)) {
+    if (index !== 0) {
         client.fullScreen = true;
     }
 
@@ -234,30 +291,7 @@ function clientSetFullscreenOn(client, screen, region, secondaryCount) {
     })
 }
 
-function allOnSecondaryRegions(secondaries) {
-    switch (secondaries.length) {
-        case 0:
-            print("primary only; no regions");
-            // We should only call this when removing a window, if ever.
-            break;
 
-        case 1:
-            return [Region.Full];
-
-        case 2:
-            return [Region.LeftHalf, Region.RightHalf];
-
-        case 3:
-            return [Region.UpperLeft, Region.RightHalf, Region.LowerLeft];
-
-        default:
-            return [Region.UpperLeft, Region.UpperRight, Region.LowerLeft, Region.LowerRight];
-    }
-}
-
-function allOnPrimaryRegions(secondaries) {
-    return [Region.Slot0, Region.Slot1, Region.Slot2, Region.Slot3].slice(0, secondaries.length);
-};
 
 function resetPrimaryFullScreen(set, windows) {
     if (set.priority != 0) {
@@ -271,23 +305,7 @@ function resetPrimaryFullScreen(set, windows) {
     }
 }
 
-function setWindowPolicy() {
-    const screens = workspace.numScreens;
-    print('setting window policy with ', screens, 'screens.');
-
-    if (screens === 1) {
-        singleSecondaryPolicy = MultiWindowPolicy.AllOnPrimary;
-        multiSecondaryPolicy = MultiWindowPolicy.AllOnPrimary
-    } else {
-        singleSecondaryPolicy = singleSecondaryPolicyOption;
-        multiSecondaryPolicy = multiSecondaryPolicyOption;
-    }
-
-    print('single:', singleSecondaryPolicy, 'multiple:', multiSecondaryPolicy);
-}
-
 function setClientWindows(set, windows) {
-    setWindowPolicy();
     resetPrimaryFullScreen(set, windows);
 
     const app = set.app;
@@ -302,22 +320,12 @@ function setClientWindows(set, windows) {
 
     const primaries = windows[0];
     const secondaries = windows[1];
-    const policy = (secondaries && secondaries.length >= 2) ? multiSecondaryPolicy : singleSecondaryPolicy;
 
     print("Setting", len, "windows for app: ", app, ":", windows.map(
         (s) => s ? s.map((c) => c.caption)
-            : ""), "with policy", policy);
+            : ""));
 
-    const fullscreenRegion = function () {
-        switch (policy) {
-            case MultiWindowPolicy.AllOnPrimary:
-                return Region.Squish;
-            case MultiWindowPolicy.AllOnSecondary:
-                return Region.Full;
-        }
-    }();
-
-    if (primaries && primaries[0]) {
+    if (primaries?.[0]) {
         const primary = primaries[0];
 
         if (primaries.length > 1) {
@@ -325,29 +333,18 @@ function setClientWindows(set, windows) {
         }
 
         if (primary.fullScreen) {
-            clientSetFullscreenOn(primary, primaryDisplay, fullscreenRegion, secondaries ? secondaries.length : 0);
+            clientSetFullscreenOn(primary, set.settings, 0, secondaries ? secondaries.length : 0);
         }
     }
 
     if (secondaries) {
         secondaries.sort((a, b) => a.caption < b.caption ? -1 : 1);
 
-        const regions = policy === MultiWindowPolicy.AllOnPrimary ? allOnPrimaryRegions(secondaries) : allOnSecondaryRegions(secondaries);
-
         for (const window in secondaries) {
-            const region = regions[window];
             const client = secondaries[window];
-            if (region) {
-                const display = function () {
-                    switch (policy) {
-                        case MultiWindowPolicy.AllOnPrimary:
-                            return primaryDisplay;
-                        case MultiWindowPolicy.AllOnSecondary:
-                            return secondaryDisplay;
-                    }
-                }();
+            if (index <= 4) { // max 4 secondary windows
                 if (primaryFullScreen) {
-                    clientSetFullscreenOn(client, display, region, secondaries.length);
+                    clientSetFullscreenOn(client, set.settings, window, secondaries.length);
                     client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
                 } else {
                     resetClient(client); // reset the geometry
@@ -367,7 +364,7 @@ function setClientWindows(set, windows) {
             workspace.sendClientToScreen(client, secondaryDisplay);
             client.fullScreen = false;
             client.setMaximize(true, true);
-            client.keepAbove = keepAbove && (!primaryFullScreen || !secondaries || policy === MultiWindowPolicy.AllOnPrimary);
+            client.keepAbove = keepAbove && (!primaryFullScreen || (!secondaries && workspace.numScreens === 1));
         }
     }
 }
@@ -381,11 +378,13 @@ function getAppSet(client) {
     for (set in appSets) {
         const matchesPrimary = appSets[set].primary.test(caption);
         const matchesSecondary = appSets[set].secondary.test(caption);
-        if (appSets[set].classes.some((wc) => { return windowClass.includes(wc); })) {
+        const appSet = appSets[set];
+        if (appSet.classes.some((wc) => { return windowClass.includes(wc); })) {
             const res = {
                 app: set,
                 // 0 is primary window, 1 is secondary window, 2 is other
-                priority: matchesSecondary ? 1 : matchesPrimary ? 0 : 2
+                priority: matchesSecondary ? 1 : matchesPrimary ? 0 : 2,
+                settings: appSet.settings
             };
 
             print("matched", caption, "with", res.app, "priority", res.priority);
