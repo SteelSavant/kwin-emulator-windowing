@@ -48,7 +48,7 @@ const appSets = {
     },
     "Citra": {
         classes: ["citra", "citra-qt"],
-        primary: /^Citra((?!Secondary).)*/,
+        primary: /^Citra((?!Secondary).)*|((?!Secondary).)*/,
         secondary: /^Citra.*Secondary/
     },
     "Dolphin": {
