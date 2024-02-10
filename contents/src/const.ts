@@ -18,6 +18,7 @@ export interface AppSettings {
     singleScreenLayout: Layout,
     multiScreenSingleSecondaryLayout: Layout,
     multiScreenMultiSecondaryLayout?: Layout | undefined,
+    blacklist?: RegExp[]
 }
 
 export const appConfigs: { [k: string]: AppConfig } = {

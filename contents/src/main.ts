@@ -1,4 +1,4 @@
-import { AppConfig, AppSettings, appConfigs, Layout } from "./const";
+import { AppSettings, appConfigs, Layout } from "./const";
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
 print("!!!KWINSCRIPT!!!");
@@ -10,10 +10,43 @@ print("!!!KWINSCRIPT!!!");
 // Configuration
 
 /// Render primary window to smaller screen instead of larger one.
-const swapScreens = false;
+const swapScreens: boolean = readConfig('swapScreens', false);
 
 /// Keep app windows above other windows
-const keepAbove = true;
+const keepAbove: boolean = readConfig('keepAbove', false);
+
+{
+    const cemuSingleScreenLayout: Layout = readConfig('cemuSingleScreenLayout', 'column-right');
+    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfig('cemuMultiScreenSingleSecondaryLayout', 'separate');
+
+    for (const app of ['Cemu', 'Cemu (Proton)']) {
+        const settings = appConfigs[app].settings;
+        settings.singleScreenLayout = cemuSingleScreenLayout;
+        settings.multiScreenSingleSecondaryLayout = cemuMultiScreenSingleSecondaryLayout;
+    }
+}
+
+{
+    const citraSingleScreenLayout: Layout = readConfig('citraSingleScreenLayout', 'column-right');
+    const citraMultiScreenSingleSecondaryLayout: Layout = readConfig('citraMultiScreenSingleSecondaryLayout', 'separate');
+
+    const settings = appConfigs['Citra'].settings;
+    settings.singleScreenLayout = citraSingleScreenLayout;
+    settings.multiScreenSingleSecondaryLayout = citraMultiScreenSingleSecondaryLayout;
+}
+
+{
+    const dolphinSingleScreenLayout: Layout = readConfig('dolphinSingleScreenLayout', 'column-right');
+    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfig('dolphinMultiScreenSingleSecondaryLayout', 'separate');
+    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfig('dolphinMultiScreenMultiSecondaryLayout', 'column-right');
+    const dolphinBlacklist: string[] = readConfig('dolphinBlacklist', []);
+
+    const settings = appConfigs['Dolphin'].settings;
+    settings.singleScreenLayout = dolphinSingleScreenLayout;
+    settings.multiScreenSingleSecondaryLayout = dolphinMultiScreenSingleSecondaryLayout;
+    settings.multiScreenMultiSecondaryLayout = dolphinMultiScreenMultiSecondaryLayout;
+    settings.blacklist = dolphinBlacklist.map((v) => new RegExp(`^${v}`));
+}
 
 type AppWindows = {
     [key in WindowType]: KWin.AbstractClient[]
@@ -72,7 +105,7 @@ function setScreens(screenCount: number) {
 
 const oldSettings: {
     [k: number]: {
-        geometry: QRect,
+        frameGeometry: QRect,
         fullScreen: boolean,
         keepAbove: boolean,
     }
@@ -83,7 +116,7 @@ let oldPrimaryFullScreen = false;
 
 function resetClient(client: KWin.AbstractClient) {
     const oldClient = oldSettings[client.windowId];
-    client.geometry = oldClient.geometry;
+    client.frameGeometry = oldClient.frameGeometry;
     client.fullScreen = oldClient.fullScreen;
     client.keepAbove = oldClient.keepAbove;
 }
@@ -243,13 +276,14 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
 
     /// fullscreen settings
     if (index !== 0) {
+        client.minimized = false;
         client.fullScreen = true;
     }
 
     if (keepAbove) {
         client.keepAbove = true;
     }
-    client.geometry = geometry;
+    client.frameGeometry = geometry;
 
     // Cemu (Proton) won't choose the correct screen without delay
     delay(10, () => {
@@ -355,7 +389,10 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
         const matchesPrimary = config.primary.test(caption);
         const matchesSecondary = config.secondary.test(caption);
-        if (config.classes.some((wc) => { return windowClass.includes(wc); })) {
+        const matches = config.classes.some((wc) => { return windowClass.includes(wc); })
+        const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(windowClass))
+        print('tmp: blacklist:', config.settings.blacklist);
+        if (matches && !blacklisted) {
             const res: WindowConfig = {
                 app: app,
                 // 0 is primary window, 1 is secondary window, 2 is other
@@ -381,7 +418,7 @@ function handleClient(client: KWin.AbstractClient): void {
     if (client.normalWindow && windowConfig) {
         if (!oldSettings[client.windowId]) {
             oldSettings[client.windowId] = {
-                geometry: client.geometry,
+                frameGeometry: client.frameGeometry,
                 fullScreen: client.fullScreen,
                 keepAbove: client.keepAbove,
             }

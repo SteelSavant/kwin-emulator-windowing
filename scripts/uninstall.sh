@@ -1,6 +1,6 @@
 #!/bin/bash
 
-id="$(grep -oP '(?<=X-KDE-PluginInfo-Name=).*' metadata.desktop)"
+id="emulatorwindowing"
 if kpackagetool5 --type=KWin/Script --list | grep "^$id$" > /dev/null; then
     kpackagetool5 --type=KWin/Script -r "$id"
 fi

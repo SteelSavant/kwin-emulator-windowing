@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg 
+    xmlns="http://www.kde.org/standards/kcfg/1.0" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd"
+>
+    <kcfgfile name=""/>
+    
+    <group name="General">
+        <entry name="swapScreens" type="Bool">
+            <label>If true, use the smaller display for the main window.</label>
+            <default>false</default>
+        </entry>
+        <entry name="keepAbove" type="Bool">
+            <label>Keep active app windows above other windows</label>
+            <default>true</default>
+        </entry>
+    </group>
+    <group name="Cemu">
+        <entry name="cemuSingleScreenLayout" type="Enum">
+            <label>Layout to use when only one display is available.</label>
+            <choices>
+               <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+            </choices>
+            <default>0</default> <!--Column-Right-->
+        </entry>
+        <entry name="cemuMultiScreenSingleSecondaryLayout" type="Enum">
+            <label>Layout to use when multiple displays are available.</label>
+            <choices>
+                <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+                <choice name="separate">
+                    <label>Separate Displays</label>
+                </choice>
+            </choices>
+            <default>4</default> <!--Separate Displays-->
+        </entry>
+    </group>
+    <group name="Citra">
+        <entry name="citraSingleScreenLayout" type="Enum">
+            <label>Layout to use when only one display is available.</label>
+            <choices>
+               <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+            </choices>
+            <default>0</default> <!--Column-Right-->
+        </entry>
+        <entry name="citraMultiScreenSingleSecondaryLayout" type="Enum">
+            <label>Layout to use when multiple displays are available.</label>
+            <choices>
+                <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+                <choice name="separate">
+                    <label>Separate Displays</label>
+                </choice>
+            </choices>
+            <default>4</default> <!--Separate Displays-->
+        </entry>
+    </group>
+    <group name="Dolphin">
+        <entry name="dolphinSingleScreenLayout" type="Enum">
+            <label>Layout to use when only one display is available.</label>
+            <choices>
+               <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+            </choices>
+            <default>0</default> <!--Column-Right-->
+        </entry>
+        <entry name="dolphinMultiScreenSingleSecondaryLayout" type="Enum">
+            <label>Layout to use when multiple displays are available, and only one GBA screen is active.</label>
+            <choices>
+                <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+                <choice name="separate">
+                    <label>Separate Displays</label>
+                </choice>
+            </choices>
+            <default>4</default> <!--Separate Displays-->
+        </entry>
+        <entry name="dolphinMultiScreenMultiSecondaryLayout" type="Enum">
+            <label>Layout to use when multiple displays are available, and multiple GBA screens are active.</label>
+            <choices>
+                <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+                <choice name="separate">
+                    <label>Separate Displays</label>
+                </choice>
+            </choices>
+            <default>0</default> <!--Column-Right-->
+        </entry>
+        <entry name="dolphinBlacklist" type="StringList">
+            <label>List of GBA screens to be hidden/ignored, in the format "GBA1, GBA2, GBA3, GBA4".</label>
+            <default>GBA1, GBA2, GBA3</default>
+        </entry>
+    </group>
+</kcfg>

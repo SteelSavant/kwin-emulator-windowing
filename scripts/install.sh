@@ -1,6 +1,6 @@
 #!/bin/bash
 
-id="$(grep -oP '(?<=X-KDE-PluginInfo-Name=).*' metadata.desktop)"
+id="emulatorwindowing"
 [[ -f "$id.kwinscript" ]] || {
     echo "No packaged script named '$id.kwinscript' found"
     exit 1

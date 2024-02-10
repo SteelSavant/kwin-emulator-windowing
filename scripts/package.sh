@@ -1,5 +1,5 @@
 #!/bin/bash
-id="$(grep -oP '(?<=X-KDE-PluginInfo-Name=).*' metadata.desktop)"
+id="emulatorwindowing"
 GLOBIGNORE=".:..:.pkgignore"
 
 add_file_entries () {

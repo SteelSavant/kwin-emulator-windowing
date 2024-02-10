@@ -1,6 +1,6 @@
 #!/bin/bash
 
-id="$(grep -oP '(?<=X-KDE-PluginInfo-Name=).*' metadata.desktop)"
+id="emulatorwindowing"
 
 is_enabled="$(kreadconfig5 --file kwinrc --group Plugins --key "${id}Enabled")"
 if [[ "$is_enabled" != "true" ]]; then
