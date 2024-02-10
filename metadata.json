@@ -13,6 +13,7 @@
         "License": "GPLv3",
         "Website": "https://github.com/steelsavant/deck-ds"
     },
+    "X-KDE-ConfigModule": "kwin/effects/configs/kcm_kwin4_genericscripted",
     "X-Plasma-API": "javascript",
     "X-Plasma-MainScript": "code/main.js",
     "KPackageStructure": "KWin/Script"

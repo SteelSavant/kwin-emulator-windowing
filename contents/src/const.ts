@@ -44,7 +44,7 @@ export const appConfigs: { [k: string]: AppConfig } = {
     },
     "Citra": {
         classes: ["citra", "citra-qt"],
-        primary: /^Citra((?!Secondary).)*|((?!Secondary).)*/,
+        primary: /^Citra[^\|]+\|[^\|]+$|^Citra[^\|]+\|[^\|]+\|[^\|]+Primary[^\|]*$/,
         secondary: /^Citra.*Secondary/,
         settings: {
             secondaryWindowAspectRatio: 4 / 3,

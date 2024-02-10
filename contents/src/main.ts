@@ -13,11 +13,16 @@ print("!!!KWINSCRIPT!!!");
 const swapScreens: boolean = readConfig('swapScreens', false);
 
 /// Keep app windows above other windows
-const keepAbove: boolean = readConfig('keepAbove', false);
+const keepAbove: boolean = readConfig('keepAbove', true);
+
+print('General Settings:: keepabove:', keepAbove, ', swapScreens:', swapScreens);
 
 {
-    const cemuSingleScreenLayout: Layout = readConfig('cemuSingleScreenLayout', 'column-right');
-    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfig('cemuMultiScreenSingleSecondaryLayout', 'separate');
+    const cemuSingleScreenLayout: Layout = readConfig('cemuSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfig('cemuMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+    print('Cemu Settings:: single:', cemuSingleScreenLayout, ', multi:', cemuMultiScreenSingleSecondaryLayout);
 
     for (const app of ['Cemu', 'Cemu (Proton)']) {
         const settings = appConfigs[app].settings;
@@ -27,8 +32,12 @@ const keepAbove: boolean = readConfig('keepAbove', false);
 }
 
 {
-    const citraSingleScreenLayout: Layout = readConfig('citraSingleScreenLayout', 'column-right');
-    const citraMultiScreenSingleSecondaryLayout: Layout = readConfig('citraMultiScreenSingleSecondaryLayout', 'separate');
+    const citraSingleScreenLayout: Layout = readConfig('citraSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const citraMultiScreenSingleSecondaryLayout: Layout = readConfig('citraMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+
+    print('Citra Settings:: single:', citraSingleScreenLayout, ', multi:', citraMultiScreenSingleSecondaryLayout);
 
     const settings = appConfigs['Citra'].settings;
     settings.singleScreenLayout = citraSingleScreenLayout;
@@ -36,16 +45,23 @@ const keepAbove: boolean = readConfig('keepAbove', false);
 }
 
 {
-    const dolphinSingleScreenLayout: Layout = readConfig('dolphinSingleScreenLayout', 'column-right');
-    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfig('dolphinMultiScreenSingleSecondaryLayout', 'separate');
-    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfig('dolphinMultiScreenMultiSecondaryLayout', 'column-right');
-    const dolphinBlacklist: string[] = readConfig('dolphinBlacklist', []);
+    const dolphinSingleScreenLayout: Layout = readConfig('dolphinSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfig('dolphinMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfig('dolphinMultiScreenMultiSecondaryLayout', 'column-right')
+        .toLowerCase();
+    const dolphinBlacklist: string = readConfig('dolphinBlacklist', '')
+        .trim()
+        .toUpperCase();
+
+    print('Dolphin Settings:: single:', dolphinSingleScreenLayout, ', multi1:', dolphinMultiScreenSingleSecondaryLayout, ", multi+:", dolphinMultiScreenMultiSecondaryLayout, 'blacklist:', dolphinBlacklist);
 
     const settings = appConfigs['Dolphin'].settings;
     settings.singleScreenLayout = dolphinSingleScreenLayout;
     settings.multiScreenSingleSecondaryLayout = dolphinMultiScreenSingleSecondaryLayout;
     settings.multiScreenMultiSecondaryLayout = dolphinMultiScreenMultiSecondaryLayout;
-    settings.blacklist = dolphinBlacklist.map((v) => new RegExp(`^${v}`));
+    settings.blacklist = (dolphinBlacklist ?? '').split(',').map((v) => new RegExp(`^${v.trim()}`));
 }
 
 type AppWindows = {
@@ -310,7 +326,12 @@ function calcNumWindows(windows: AppWindows): number {
 }
 
 function printWindows(app: string, len: number, windows: AppWindows): void {
-    print("Setting", len, "windows for app: ", app, ":", windows);
+
+    print("Setting", len, "windows for app: ", app, ":");
+    print('primary:', windows['primary'].map((p) => p.caption));
+    print('secondary:', windows['secondary'].map((p) => p.caption));
+    print('other:', windows['other'].map((p) => p.caption));
+
 }
 
 function setClientWindows(config: WindowConfig, windows: AppWindows) {
@@ -326,6 +347,7 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
     const primaries = windows['primary'];
     const secondaries = windows['secondary'];
+    const other = windows['other'];
 
     printWindows(app, len, windows);
 
@@ -333,7 +355,12 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
     if (primary) {
         if (primaries.length > 1) {
-            print("too many primary windows; using,", primary, "ignoring", primaries.slice(1).map((c) => c.caption));
+            primaries.sort((a, b) => a.caption.length > b.caption.length
+                ? -1 : 1);
+
+            const toOther = primaries.splice(1, primaries.length - 1);
+            print("too many primary windows; using,", primary, "ignoring", toOther.map((c) => c.caption));
+            other.push(...toOther);
         }
 
         if (primary.fullScreen) {
@@ -361,7 +388,6 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
         }
     }
 
-    const other = windows['other'];
 
     for (const client of other) {
         print("handling other window:", client.caption);
@@ -391,7 +417,6 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
         const matchesSecondary = config.secondary.test(caption);
         const matches = config.classes.some((wc) => { return windowClass.includes(wc); })
         const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(windowClass))
-        print('tmp: blacklist:', config.settings.blacklist);
         if (matches && !blacklisted) {
             const res: WindowConfig = {
                 app: app,

@@ -159,9 +159,9 @@
             </choices>
             <default>0</default> <!--Column-Right-->
         </entry>
-        <entry name="dolphinBlacklist" type="StringList">
+        <entry name="dolphinBlacklist" type="String">
             <label>List of GBA screens to be hidden/ignored, in the format "GBA1, GBA2, GBA3, GBA4".</label>
-            <default>GBA1, GBA2, GBA3</default>
+            <default></default>
         </entry>
     </group>
 </kcfg>

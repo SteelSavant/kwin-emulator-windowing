@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>KWin::EmulatorWindowingConfigForm</class>
+ <widget class="QWidget" name="KWin::EmulatorWindowingConfigForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>450</width>
+    <height>786</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>200</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Emulator Windowing</string>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0" colspan="2">
+    <widget class="QGroupBox" name="GeneralGroup">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>2</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>108</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>General</string>
+     </property>
+     <widget class="QWidget" name="">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>40</y>
+        <width>127</width>
+        <height>60</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="kcfg_swapScreens">
+         <property name="text">
+          <string>Swap Screens</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="kcfg_keepAbove">
+         <property name="text">
+          <string>Keep Above</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="QGroupBox" name="CemuGroup">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>2</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>130</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Cemu</string>
+     </property>
+     <widget class="QWidget" name="layoutWidget_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>40</y>
+        <width>300</width>
+        <height>80</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="cemuGridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="cemuSingleScreenLayoutLabel">
+         <property name="text">
+          <string>Single-Window Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="kcfg_cemuSingleScreenLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="cemuMultiScreenLayoutLabel">
+         <property name="text">
+          <string>Multi-Window Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="kcfg_cemuMultiScreenSingleSecondaryLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Separate</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QGroupBox" name="CitraGroup">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>2</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>138</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Citra</string>
+     </property>
+     <widget class="QWidget" name="layoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>50</y>
+        <width>300</width>
+        <height>80</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="citraGridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="citraSingleScreenLayout">
+         <property name="text">
+          <string>Single-Window Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="kcfg_citraSingleScreenLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="citraMultiScreenLayout">
+         <property name="text">
+          <string>Multi-Window Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="kcfg_citraMultiScreenSingleSecondaryLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Separate</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <widget class="QGroupBox" name="DolphinGroup">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>3</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>224</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Dolphin</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <widget class="QWidget" name="">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>51</y>
+        <width>393</width>
+        <height>192</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="dolphinGridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="dolphinSingleScreenLayout">
+         <property name="text">
+          <string>Single-Window Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="dolphinMultiScreenMultiSecondaryLayout">
+         <property name="text">
+          <string>Multi-Window Multi-GBA Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="kcfg_dolphinMultiScreenMultiSecondaryLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Separate</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="dolphinMultiScreenSingleSecondaryLayout">
+         <property name="text">
+          <string>Multi-Window Single-GBA Layout</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="dolphinBlacklistLabel">
+         <property name="text">
+          <string>GBA Blacklist</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="kcfg_dolphinBlacklist"/>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="kcfg_dolphinSingleScreenLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="kcfg_dolphinMultiScreenSingleSecondaryLayout">
+         <item>
+          <property name="text">
+           <string>Column-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Column-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Right</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Square-Left</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Separate</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
