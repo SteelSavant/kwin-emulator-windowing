@@ -15,7 +15,7 @@ const swapScreens: boolean = readConfig('swapScreens', false);
 /// Keep app windows above other windows
 const keepAbove: boolean = readConfig('keepAbove', true);
 
-print('General Settings:: keepabove:', keepAbove, ', swapScreens:', swapScreens);
+print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens);
 
 {
     const cemuSingleScreenLayout: Layout = readConfig('cemuSingleScreenLayout', 'column-right')
@@ -55,7 +55,10 @@ print('General Settings:: keepabove:', keepAbove, ', swapScreens:', swapScreens)
         .trim()
         .toUpperCase();
 
-    print('Dolphin Settings:: single:', dolphinSingleScreenLayout, ', multi1:', dolphinMultiScreenSingleSecondaryLayout, ", multi+:", dolphinMultiScreenMultiSecondaryLayout, 'blacklist:', dolphinBlacklist);
+    print('Dolphin Settings:: single:', dolphinSingleScreenLayout,
+        ', multi1:', dolphinMultiScreenSingleSecondaryLayout,
+        ", multi+:", dolphinMultiScreenMultiSecondaryLayout,
+        ', blacklist:', dolphinBlacklist);
 
     const settings = appConfigs['Dolphin'].settings;
     settings.singleScreenLayout = dolphinSingleScreenLayout;
@@ -111,6 +114,8 @@ function setScreens(screenCount: number) {
 
     print("primary display: ", primaryDisplay, ", geometry: ", workspace.clientArea(KWin.MaximizeArea, primaryDisplay, 1));
     print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientArea(KWin.MaximizeArea, secondaryDisplay, 1));
+
+    normalClients = {};
 
     const clients = workspace.clientList();
     for (const client of clients) {
@@ -181,15 +186,12 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
     let maxSecondaryWidth = geometry.width / 2;
 
     // swap layout engine where possible to simplify logic
-    if (index > 0) {
-        if (secondaryCount < 3) {
-            if (layout === 'square-left') {
-                layout = 'column-left';
-            } else if (layout === 'square-right') {
-                layout = 'column-right';
-            }
-        }
-    } else if (secondaryCount === 0) {
+
+    if (secondaryCount < 3) {
+        layout = layout.replace('square', 'column') as Layout;
+    }
+
+    if (secondaryCount === 0) {
         layout = 'separate';
     }
 
@@ -229,7 +231,9 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
             secondaryWidth = maxSecondaryWidth > secondaryWidth
                 ? secondaryWidth
                 : maxSecondaryWidth;
-            secondaryHeight = (1 / settings.secondaryWindowAspectRatio) * secondaryWidth;
+            if (secondaryCount > 1) {
+                secondaryHeight = (1 / settings.secondaryWindowAspectRatio) * secondaryWidth;
+            }
 
             if (index === 0) {
                 if (layout === 'column-left') {
@@ -345,9 +349,9 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
         return;
     }
 
-    const primaries = windows['primary'];
-    const secondaries = windows['secondary'];
-    const other = windows['other'];
+    const primaries = [...windows['primary']];
+    const secondaries = [...windows['secondary']];
+    const other = [...windows['other']];
 
     printWindows(app, len, windows);
 
@@ -416,8 +420,14 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
         const matchesPrimary = config.primary.test(caption);
         const matchesSecondary = config.secondary.test(caption);
         const matches = config.classes.some((wc) => { return windowClass.includes(wc); })
-        const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(windowClass))
-        if (matches && !blacklisted) {
+        if (matches) {
+            const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));
+            if (blacklisted) {
+                client.fullScreen = false;
+                client.minimized = true;
+                return null;
+            }
+
             const res: WindowConfig = {
                 app: app,
                 // 0 is primary window, 1 is secondary window, 2 is other
@@ -428,6 +438,7 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
             };
 
             print("matched", caption, "with", res.app, "priority", res.type);
+            print('blacklist:', config.settings.blacklist);
             return res;
         }
     }
@@ -572,14 +583,14 @@ workspace.clientRemoved.connect((client) => {
 })
 
 workspace.numberScreensChanged.connect((count) => {
-    delay(2000, () => setScreens(count));
+    delay(5000, () => setScreens(count));
 });
 
 workspace.screenResized.connect((screen) => {
     if (primaryDisplay === screen || secondaryDisplay === screen) {
         const screens = workspace.numScreens;
 
-        delay(500, () => setScreens(screens));
+        delay(2000, () => setScreens(screens));
     }
 })
 

@@ -6,7 +6,7 @@
 >
     <kcfgfile name=""/>
     
-    <group name="General">
+    <group name=""/>
         <entry name="swapScreens" type="Bool">
             <label>If true, use the smaller display for the main window.</label>
             <default>false</default>
@@ -15,8 +15,7 @@
             <label>Keep active app windows above other windows</label>
             <default>true</default>
         </entry>
-    </group>
-    <group name="Cemu">
+
         <entry name="cemuSingleScreenLayout" type="Enum">
             <label>Layout to use when only one display is available.</label>
             <choices>
@@ -56,8 +55,7 @@
             </choices>
             <default>4</default> <!--Separate Displays-->
         </entry>
-    </group>
-    <group name="Citra">
+
         <entry name="citraSingleScreenLayout" type="Enum">
             <label>Layout to use when only one display is available.</label>
             <choices>
@@ -97,8 +95,7 @@
             </choices>
             <default>4</default> <!--Separate Displays-->
         </entry>
-    </group>
-    <group name="Dolphin">
+
         <entry name="dolphinSingleScreenLayout" type="Enum">
             <label>Layout to use when only one display is available.</label>
             <choices>
