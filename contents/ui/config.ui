@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>450</width>
-    <height>786</height>
+    <height>630</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -37,40 +37,37 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>108</height>
+       <height>80</height>
       </size>
      </property>
      <property name="title">
       <string>General</string>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QSplitter" name="splitter">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>21</x>
         <y>40</y>
-        <width>127</width>
-        <height>60</height>
+        <width>401</width>
+        <height>26</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="kcfg_swapScreens">
-         <property name="text">
-          <string>Swap Screens</string>
-         </property>
-         <property name="checked">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QCheckBox" name="kcfg_keepAbove">
-         <property name="text">
-          <string>Keep Above</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QCheckBox" name="kcfg_swapScreens">
+       <property name="text">
+        <string>Swap Screens</string>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="kcfg_keepAbove">
+       <property name="text">
+        <string>Keep Above</string>
+       </property>
+      </widget>
      </widget>
     </widget>
    </item>
@@ -94,9 +91,9 @@
      <widget class="QWidget" name="layoutWidget_2">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>10</x>
         <y>40</y>
-        <width>300</width>
+        <width>421</width>
         <height>80</height>
        </rect>
       </property>
@@ -192,9 +189,9 @@
      <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
-        <x>30</x>
+        <x>10</x>
         <y>50</y>
-        <width>300</width>
+        <width>421</width>
         <height>80</height>
        </rect>
       </property>
@@ -230,13 +227,6 @@
          </item>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="citraMultiScreenLayout">
-         <property name="text">
-          <string>Multi-Window Layout</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="1">
         <widget class="QComboBox" name="kcfg_citraMultiScreenSingleSecondaryLayout">
          <item>
@@ -266,6 +256,13 @@
          </item>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="citraMultiScreenLayout">
+         <property name="text">
+          <string>Multi-Window Layout</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
@@ -281,7 +278,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>224</height>
+       <height>256</height>
       </size>
      </property>
      <property name="title">
@@ -296,12 +293,12 @@
      <property name="checkable">
       <bool>false</bool>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
-        <x>30</x>
+        <x>12</x>
         <y>51</y>
-        <width>393</width>
+        <width>421</width>
         <height>192</height>
        </rect>
       </property>
