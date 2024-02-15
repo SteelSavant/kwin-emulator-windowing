@@ -327,7 +327,7 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
     print("client final geometry: x:", geometry.x, "y:", geometry.y, "width:", geometry.width, "height:", geometry.height);
 
     if (settings.delayReconfigure) {
-        delay(10, () => {
+        delay(100, () => {
             workspace.sendClientToScreen(client, screen);
         });
     } else {
