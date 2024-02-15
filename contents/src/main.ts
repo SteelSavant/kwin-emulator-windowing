@@ -290,8 +290,6 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
                     geometry.x += primaryWidth;
                 }
 
-
-
                 geometry.width = secondaryWidth;
                 geometry.height = secondaryHeight;
 
