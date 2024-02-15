@@ -212,16 +212,15 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
                     geometry.x += width;
                 }
 
-                if (index === 3 && secondaryCount === 3) {
-                    geometry.x += width / 2;
+                if (!(index === 3 && secondaryCount === 3)) {
+                    geometry.width = width;
                 }
+
+                geometry.height = height;
 
                 if (index > 2) {
                     geometry.y += height;
                 }
-
-                geometry.width = width;
-                geometry.height = height;
             }
             break;
         case 'column-left':
