@@ -17,11 +17,14 @@ export interface AppSettings {
     secondaryWindowAspectRatio: number,
     singleScreenLayout: Layout,
     multiScreenSingleSecondaryLayout: Layout,
-    multiScreenMultiSecondaryLayout?: Layout | undefined,
+    multiScreenMultiSecondaryLayout?: Layout
     blacklist?: RegExp[],
     /// Some emulators (Cemu Proton) require delay to handle windows properly;
     /// delay breaks dolphin on display reconnect, so its configurable
-    delayReconfigure?: boolean | undefined
+    delayReconfigure?: boolean
+    /// Citra needs to be watched for caption changes, as, 
+    /// depending on settings, the menu can become the primary window
+    watchCaption?: boolean
 }
 
 export const appConfigs: { [k: string]: AppConfig } = {
@@ -54,6 +57,7 @@ export const appConfigs: { [k: string]: AppConfig } = {
             secondaryWindowAspectRatio: 4 / 3,
             singleScreenLayout: 'column-right',
             multiScreenSingleSecondaryLayout: 'separate',
+            watchCaption: true,
         }
     },
     "Dolphin": {

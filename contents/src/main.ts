@@ -9,18 +9,26 @@ print("!!!KWINSCRIPT!!!");
 
 // Configuration
 
+function readConfigCleaned(key: string, defaultValue?: any): any {
+    const value = readConfig(key, defaultValue);
+    if (typeof (value) === 'string') {
+        return value.replace(/"/g, "");
+    }
+    return value;
+}
+
 /// Render primary window to smaller screen instead of larger one.
-const swapScreens: boolean = readConfig('swapScreens', false);
+const swapScreens: boolean = readConfigCleaned('swapScreens', false);
 
 /// Keep app windows above other windows
-const keepAbove: boolean = readConfig('keepAbove', true);
+const keepAbove: boolean = readConfigCleaned('keepAbove', true);
 
 print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens);
 
 {
-    const cemuSingleScreenLayout: Layout = readConfig('cemuSingleScreenLayout', 'column-right')
+    const cemuSingleScreenLayout: Layout = readConfigCleaned('cemuSingleScreenLayout', 'column-right')
         .toLowerCase();
-    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfig('cemuMultiScreenSingleSecondaryLayout', 'separate')
+    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('cemuMultiScreenSingleSecondaryLayout', 'separate')
         .toLowerCase();
     print('Cemu Settings:: single:', cemuSingleScreenLayout, ', multi:', cemuMultiScreenSingleSecondaryLayout);
 
@@ -32,9 +40,9 @@ print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens)
 }
 
 {
-    const citraSingleScreenLayout: Layout = readConfig('citraSingleScreenLayout', 'column-right')
+    const citraSingleScreenLayout: Layout = readConfigCleaned('citraSingleScreenLayout', 'column-right')
         .toLowerCase();
-    const citraMultiScreenSingleSecondaryLayout: Layout = readConfig('citraMultiScreenSingleSecondaryLayout', 'separate')
+    const citraMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('citraMultiScreenSingleSecondaryLayout', 'separate')
         .toLowerCase();
 
     print('Citra Settings:: single:', citraSingleScreenLayout, ', multi:', citraMultiScreenSingleSecondaryLayout);
@@ -45,13 +53,13 @@ print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens)
 }
 
 {
-    const dolphinSingleScreenLayout: Layout = readConfig('dolphinSingleScreenLayout', 'column-right')
+    const dolphinSingleScreenLayout: Layout = readConfigCleaned('dolphinSingleScreenLayout', 'column-right')
         .toLowerCase();
-    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfig('dolphinMultiScreenSingleSecondaryLayout', 'separate')
+    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenSingleSecondaryLayout', 'separate')
         .toLowerCase();
-    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfig('dolphinMultiScreenMultiSecondaryLayout', 'column-right')
+    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenMultiSecondaryLayout', 'column-right')
         .toLowerCase();
-    const dolphinBlacklist: string = readConfig('dolphinBlacklist', '')
+    const dolphinBlacklist: string = readConfigCleaned('dolphinBlacklist', '')
         .trim()
         .toUpperCase();
 
@@ -115,7 +123,6 @@ function setScreens() {
 
     const clients = workspace.clientList();
     for (const client of clients) {
-        print('handling client', client.caption, 'with class', client.resourceClass.toString())
         handleClient(client);
     }
 }
@@ -148,8 +155,6 @@ function assertWindowsValid(windows: AppWindows) {
             }
         }
     }
-
-    print("windows are valid");
 }
 
 function isStandardAspectRatio(geometry: QRect) {
@@ -167,7 +172,6 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
     const [screen, otherScreen] = index === 0 || layout != 'separate'
         ? [primaryDisplay, secondaryDisplay]
         : [secondaryDisplay, primaryDisplay];
-
     print('setting client', client.caption, 'on screen', screen, 'with layout', layout, 'index', index);
 
     const geometry = workspace.clientArea(KWin.ScreenArea, screen, workspace.currentDesktop);
@@ -179,7 +183,6 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
         geometry.height += diff;
     }
 
-    const maxSecondaryWidth = geometry.width / 2;
 
     // swap layout engine where possible to simplify logic
 
@@ -195,6 +198,8 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
 
     switch (layout) {
         case 'separate':
+            print("handling separate layout");
+
             if (index > 0) {
                 const height = secondaryCount > 2
                     ? geometry.height / 2
@@ -221,6 +226,8 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
             break;
         case 'column-left':
         case 'column-right': {
+            const maxSecondaryWidth = geometry.width / 2;
+
             let secondaryHeight = geometry.height / secondaryCount;
             let secondaryWidth = settings.secondaryWindowAspectRatio * secondaryHeight;
 
@@ -253,12 +260,16 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
         case 'square-right': {
             // guaranteed to have at least 3, since we demote layout to column otherwise
 
+            const maxSecondaryWidth = geometry.width / 4;
+
             let secondaryHeight = geometry.height / 2
             let secondaryWidth = settings.secondaryWindowAspectRatio * secondaryHeight;
             secondaryWidth = maxSecondaryWidth > secondaryWidth
                 ? secondaryWidth
                 : maxSecondaryWidth;
             secondaryHeight = (1 / settings.secondaryWindowAspectRatio) * secondaryWidth;
+
+            let fullHeight = geometry.height;
 
             if (index === 0) {
                 if (layout === 'square-left') {
@@ -270,10 +281,6 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
                     geometry.x += secondaryWidth;
                 }
 
-                if (index === 3 && secondaryCount === 3) {
-                    geometry.x += secondaryWidth / 2;
-                }
-
                 if (index > 2) {
                     geometry.y += secondaryHeight;
                 }
@@ -283,12 +290,29 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
                     geometry.x += primaryWidth;
                 }
 
+
+
                 geometry.width = secondaryWidth;
                 geometry.height = secondaryHeight;
+
+                if (secondaryCount === 3) {
+                    if (index === 3) {
+                        geometry.width = secondaryWidth * 2;
+                        geometry.height = secondaryHeight * 2;
+                    }
+                    geometry.y += (fullHeight - secondaryHeight * 3) / 2
+                } else {
+                    geometry.y += (fullHeight - secondaryHeight * 2) / 2
+                }
             }
             break;
+
         }
+        default:
+            throw 'unhandled layout: ' + layout;
     };
+
+    client.setMaximize(false, false);
 
     /// fullscreen settings
     if (index !== 0) {
@@ -302,10 +326,12 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
 
     client.frameGeometry = geometry;
 
+    print("client final geometry: x:", geometry.x, "y:", geometry.y, "width:", geometry.width, "height:", geometry.height);
+
     if (settings.delayReconfigure) {
         delay(10, () => {
             workspace.sendClientToScreen(client, screen);
-        })
+        });
     } else {
         workspace.sendClientToScreen(client, screen);
     }
@@ -452,8 +478,10 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
 function handleClient(client: KWin.AbstractClient): void {
     const windowConfig = getWindowConfig(client);
-    client.captionChanged.disconnect(setScreens);
-    client.captionChanged.connect(setScreens);
+    if (windowConfig?.settings.watchCaption) {
+        client.captionChanged.disconnect(setScreens);
+        client.captionChanged.connect(setScreens);
+    }
 
     if (client.normalWindow && windowConfig) {
         if (!oldSettings[client.windowId]) {
