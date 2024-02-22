@@ -160,5 +160,79 @@
             <label>List of GBA screens to be hidden/ignored, in the format "GBA1, GBA2, GBA3, GBA4".</label>
             <default></default>
         </entry>
+
+
+        <entry name="customPrimaryWindowMatcher">
+            <label>Regex to match primary window</label>
+            <default></default>
+        </entry>
+        <entry name="customSecondaryWindowMatcher">
+            <label>Regex to match secondary windows</label>
+            <default></default>
+        </entry>
+        <entry name="customWindowClasses">
+            <label>Comma separated list of window classes to filter by</label>
+            <default></default>
+        </entry>
+        <entry name="customSingleScreenLayout" type="Enum">
+            <label>Layout to use when only one display is available.</label>
+            <choices>
+               <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+            </choices>
+            <default>0</default> <!--Column-Right-->
+        </entry>
+        <entry name="customMultiScreenSingleSecondaryLayout" type="Enum">
+            <label>Layout to use when multiple displays are available, and only secondary window is active.</label>
+            <choices>
+                <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+                <choice name="separate">
+                    <label>Separate Displays</label>
+                </choice>
+            </choices>
+            <default>4</default> <!--Separate Displays-->
+        </entry>
+        <entry name="customMultiScreenMultiSecondaryLayout" type="Enum">
+            <label>Layout to use when multiple displays are available, and multiple secondary windows are active.</label>
+            <choices>
+                <choice name="column-right">
+                    <label>Column-Right</label>
+                </choice>
+                <choice name="column-left">
+                    <label>Column-Left</label>
+                </choice>
+                <choice name="square-right">
+                    <label>Square-Right</label>
+                </choice>
+                <choice name="square-left">
+                    <label>Square-Left</label>
+                </choice>
+                <choice name="separate">
+                    <label>Separate Displays</label>
+                </choice>
+            </choices>
+            <default>0</default> <!--Column-Right-->
+        </entry>
     </group>
 </kcfg>

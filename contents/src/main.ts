@@ -6,89 +6,32 @@ print("!!!KWINSCRIPT!!!");
 // TODO::this script is fairly naive about which screen should be selected; it just picks the smallest and largest.
 // Consider reading the screens names (as reported by qdbus org.kde.KWin /KWin supportInformation, and possibly workspace.supportInformation()), and using dbus queries to get the ids.
 
-
-// Configuration
-
-function readConfigCleaned(key: string, defaultValue?: any): any {
-    const value = readConfig(key, defaultValue);
-    if (typeof (value) === 'string') {
-        return value.replace(/"/g, "");
-    }
-    return value;
-}
-
-/// Render primary window to smaller screen instead of larger one.
-const swapScreens: boolean = readConfigCleaned('swapScreens', false);
-
-/// Keep app windows above other windows
-const keepAbove: boolean = readConfigCleaned('keepAbove', true);
-
-print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens);
-
-{
-    const cemuSingleScreenLayout: Layout = readConfigCleaned('cemuSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('cemuMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-    print('Cemu Settings:: single:', cemuSingleScreenLayout, ', multi:', cemuMultiScreenSingleSecondaryLayout);
-
-    for (const app of ['Cemu', 'Cemu (Proton)']) {
-        const settings = appConfigs[app].settings;
-        settings.singleScreenLayout = cemuSingleScreenLayout;
-        settings.multiScreenSingleSecondaryLayout = cemuMultiScreenSingleSecondaryLayout;
-    }
-}
-
-{
-    const citraSingleScreenLayout: Layout = readConfigCleaned('citraSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const citraMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('citraMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-
-    print('Citra Settings:: single:', citraSingleScreenLayout, ', multi:', citraMultiScreenSingleSecondaryLayout);
-
-    const settings = appConfigs['Citra'].settings;
-    settings.singleScreenLayout = citraSingleScreenLayout;
-    settings.multiScreenSingleSecondaryLayout = citraMultiScreenSingleSecondaryLayout;
-}
-
-{
-    const dolphinSingleScreenLayout: Layout = readConfigCleaned('dolphinSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenMultiSecondaryLayout', 'column-right')
-        .toLowerCase();
-    const dolphinBlacklist: string = readConfigCleaned('dolphinBlacklist', '')
-        .trim()
-        .toUpperCase();
-
-    print('Dolphin Settings:: single:', dolphinSingleScreenLayout,
-        ', multi1:', dolphinMultiScreenSingleSecondaryLayout,
-        ", multi+:", dolphinMultiScreenMultiSecondaryLayout,
-        ', blacklist:', dolphinBlacklist);
-
-    const settings = appConfigs['Dolphin'].settings;
-    settings.singleScreenLayout = dolphinSingleScreenLayout;
-    settings.multiScreenSingleSecondaryLayout = dolphinMultiScreenSingleSecondaryLayout;
-    settings.multiScreenMultiSecondaryLayout = dolphinMultiScreenMultiSecondaryLayout;
-    settings.blacklist = dolphinBlacklist
-        .split(',')
-        .filter((v) => v.trim().length > 0)
-        .map((v) => new RegExp(`^${v.trim()}`));
-}
+// Types
 
 type AppWindows = {
     [key in WindowType]: KWin.AbstractClient[]
 }
 
-// Script logic
+// Globals
+
 let screenCount = workspace.numScreens;
 
 let primaryDisplay = 0;
 let secondaryDisplay = 0;
 
 let normalClients: { [k: string]: AppWindows } = {};
+const oldSettings: {
+    [k: number]: {
+        frameGeometry: QRect,
+        fullScreen: boolean,
+        keepAbove: boolean,
+    }
+} = {};
+
+let primaryFullScreen = false;
+let oldPrimaryFullScreen = false;
+
+// Configuration
 
 function setScreens() {
     print("Configuring screens");
@@ -127,16 +70,111 @@ function setScreens() {
     }
 }
 
-const oldSettings: {
-    [k: number]: {
-        frameGeometry: QRect,
-        fullScreen: boolean,
-        keepAbove: boolean,
-    }
-} = {};
+setScreens();
 
-let primaryFullScreen = false;
-let oldPrimaryFullScreen = false;
+function readConfigCleaned(key: string, defaultValue?: any): any {
+    const value = readConfig(key, defaultValue);
+    if (typeof (value) === 'string') {
+        return value.replace(/"/g, "").trim();
+    }
+    return value;
+}
+
+/// Render primary window to smaller screen instead of larger one.
+const swapScreens: boolean = readConfigCleaned('swapScreens', false);
+
+/// Keep app windows above other windows
+const keepAbove: boolean = readConfigCleaned('keepAbove', true);
+
+print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens);
+
+// Cemu
+{
+    const cemuSingleScreenLayout: Layout = readConfigCleaned('cemuSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('cemuMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+    print('Cemu Settings:: single:', cemuSingleScreenLayout, ', multi:', cemuMultiScreenSingleSecondaryLayout);
+
+    for (const app of ['Cemu', 'Cemu (Proton)']) {
+        const settings = appConfigs[app].settings;
+        settings.singleScreenLayout = cemuSingleScreenLayout;
+        settings.multiScreenSingleSecondaryLayout = cemuMultiScreenSingleSecondaryLayout;
+    }
+}
+
+// Citra
+{
+    const citraSingleScreenLayout: Layout = readConfigCleaned('citraSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const citraMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('citraMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+
+    print('Citra Settings:: single:', citraSingleScreenLayout, ', multi:', citraMultiScreenSingleSecondaryLayout);
+
+    const settings = appConfigs['Citra'].settings;
+    settings.singleScreenLayout = citraSingleScreenLayout;
+    settings.multiScreenSingleSecondaryLayout = citraMultiScreenSingleSecondaryLayout;
+}
+
+// Dolphin
+{
+    const dolphinSingleScreenLayout: Layout = readConfigCleaned('dolphinSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenMultiSecondaryLayout', 'column-right')
+        .toLowerCase();
+    const dolphinBlacklist: string = readConfigCleaned('dolphinBlacklist', '')
+        .trim()
+        .toUpperCase();
+
+    print('Dolphin Settings:: single:', dolphinSingleScreenLayout,
+        ', multi1:', dolphinMultiScreenSingleSecondaryLayout,
+        ", multi+:", dolphinMultiScreenMultiSecondaryLayout,
+        ', blacklist:', dolphinBlacklist);
+
+    const settings = appConfigs['Dolphin'].settings;
+    settings.singleScreenLayout = dolphinSingleScreenLayout;
+    settings.multiScreenSingleSecondaryLayout = dolphinMultiScreenSingleSecondaryLayout;
+    settings.multiScreenMultiSecondaryLayout = dolphinMultiScreenMultiSecondaryLayout;
+    settings.blacklist = dolphinBlacklist
+        .split(',')
+        .filter((v) => v.trim().length > 0)
+        .map((v) => new RegExp(`^${v.trim()}`));
+}
+
+// Custom
+{
+    const primaryWindowMatcher: string = readConfigCleaned('customPrimaryWindowMatcher', '');
+    const secondaryWindowMatcher: string = readConfigCleaned('customSecondaryWindowMatcher', '');
+    const classes: string = readConfigCleaned('customWindowClasses', '');
+    const customSingleScreenLayout: Layout = readConfigCleaned('customSingleScreenLayout', 'column-right')
+        .toLowerCase();
+    const customMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('customMultiScreenSingleSecondaryLayout', 'separate')
+        .toLowerCase();
+    const customMultiScreenMultiSecondaryLayout: Layout = readConfigCleaned('customMultiScreenMultiSecondaryLayout', 'separate')
+        .toLowerCase();
+
+
+    if (primaryWindowMatcher.length > 0) {
+        appConfigs['Custom'] = {
+            primary: new RegExp(primaryWindowMatcher),
+            secondary: new RegExp(secondaryWindowMatcher),
+            classes: classes.length > 0
+                ? classes.split(',').map((v) => v.trim())
+                : [],
+            settings: {
+                singleScreenLayout: customSingleScreenLayout,
+                multiScreenSingleSecondaryLayout: customMultiScreenSingleSecondaryLayout,
+                multiScreenMultiSecondaryLayout: customMultiScreenMultiSecondaryLayout,
+                secondaryWindowAspectRatio: 16 / 9 // TODO::this should really be recomputed based on the window location, but this is good enough for now
+            }
+        }
+    }
+}
+
+// Script logic
 
 function resetClient(client: KWin.AbstractClient) {
     const oldClient = oldSettings[client.windowId];
@@ -455,9 +493,8 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
             const res: WindowConfig = {
                 app: app,
-                // 0 is primary window, 1 is secondary window, 2 is other
-                type: matchesSecondary ? 'secondary'
-                    : matchesPrimary ? 'primary'
+                type: matchesPrimary ? 'primary'
+                    : matchesSecondary ? 'secondary'
                         : 'other',
                 settings: config.settings
             };
