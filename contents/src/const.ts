@@ -72,3 +72,12 @@ export const appConfigs: { [k: string]: AppConfig } = {
         }
     },
 };
+
+export type SecondaryAppWindowingBehavior = "PreferSecondary" | "PreferPrimary" | "Hidden" | "Unmanged";
+
+export interface SecondaryAppConfig {
+    primary: RegExp
+    classes: string[]
+    windowing: SecondaryAppWindowingBehavior
+}
+

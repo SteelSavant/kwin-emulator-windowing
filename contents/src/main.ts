@@ -1,4 +1,4 @@
-import { AppSettings, appConfigs, Layout } from "./const";
+import { AppSettings, appConfigs, Layout, SecondaryAppWindowingBehavior, SecondaryAppConfig } from "./const";
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
 print("!!!KWINSCRIPT!!!");
@@ -170,6 +170,22 @@ print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens)
                 multiScreenMultiSecondaryLayout: customMultiScreenMultiSecondaryLayout,
                 secondaryWindowAspectRatio: 16 / 9 // TODO::this should really be recomputed based on the window location, but this is good enough for now
             }
+        }
+    }
+}
+
+// Secondary App
+let secondaryAppConfig: SecondaryAppConfig | null = null;
+{
+    const primaryWindowMatcher: string = readConfigCleaned('secondaryAppPrimaryWindowMatcher', '');
+    const classes: string[] = readConfigCleaned('secondaryAppClasses', '').split(',').map((v: string) => v.trim());
+    const windowingBehavior: SecondaryAppWindowingBehavior = readConfigCleaned('secondaryAppWindowingBehavior', 'PreferSecondary')
+
+    if (primaryWindowMatcher.length > 0 && classes.length > 0) {
+        secondaryAppConfig = {
+            primary: new RegExp(primaryWindowMatcher),
+            classes: classes,
+            windowing: windowingBehavior
         }
     }
 }
