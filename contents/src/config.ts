@@ -42,8 +42,9 @@ interface SecondaryAppConfig {
 export type SecondaryAppWindowingBehavior =
     "PreferSecondary" // If main layout is Separate, prefer secondary screen
     | "PreferPrimary" // If main layout is Separate, perefer primary screen
-    | "Hidden" // Hide secondary app windows
-    | "Unmanged"; // Don't manage secondary app windows
+    | "Unmanged" // Don't manage secondary app windows
+    | "Hidden" // Like unmanaged, but minimize the windows
+    ;
 
 export function loadGeneralConfig(): GeneralConfig {
     const swapScreens: boolean = readConfigCleaned('swapScreens', false);

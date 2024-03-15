@@ -1,5 +1,5 @@
 import { loadGeneralConfig, loadAppConfigs, loadSecondaryAppConfig, Layout, AppSettings } from "./config";
-import { AppWindows, WindowType } from "./types";
+import { AppWindows, WindowConfig, WindowType } from "./types";
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
 print("!!!KWINSCRIPT!!!");
@@ -18,7 +18,9 @@ let primaryDisplay = 0;
 let secondaryDisplay = 0;
 
 let normalClients: { [k: string]: AppWindows } = {};
-let secondaryAppClients: KWin.AbstractClient[] = [];
+let secondaryAppClients: Set<KWin.AbstractClient> = new Set();
+let unmanagedClients: Set<KWin.AbstractClient> = new Set();
+
 const oldSettings: {
     [k: number]: {
         frameGeometry: QRect,
@@ -33,7 +35,8 @@ let oldPrimaryFullScreen = false;
 // Configuration
 
 const generalConfig = loadGeneralConfig();
-
+const appConfigs = loadAppConfigs();
+const secondaryAppConfig = loadSecondaryAppConfig();
 
 function setScreens() {
     print("Configuring screens");
@@ -65,7 +68,8 @@ function setScreens() {
     print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientArea(KWin.MaximizeArea, secondaryDisplay, 1));
 
     normalClients = {};
-    secondaryAppClients = [];
+    secondaryAppClients = new Set();
+    unmanagedClients = new Set();
 
     const clients = workspace.clientList();
     for (const client of clients) {
@@ -256,7 +260,7 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
         client.fullScreen = true;
     }
 
-    if (keepAbove) {
+    if (generalConfig.keepAbove) {
         client.keepAbove = true;
     }
 
@@ -291,13 +295,14 @@ function calcNumWindows(windows: AppWindows): number {
         + windows['other'].length;
 }
 
-function printWindows(app: string, len: number, windows: AppWindows): void {
+function printWindows(app: string, windows: AppWindows): void {
+    const len = calcNumWindows(windows);
 
     print("Setting", len, "windows for app: ", app, ":");
+
     print('primary:', windows['primary'].map((p) => p.caption));
     print('secondary:', windows['secondary'].map((p) => p.caption));
     print('other:', windows['other'].map((p) => p.caption));
-
 }
 
 function setClientWindows(config: WindowConfig, windows: AppWindows) {
@@ -314,15 +319,38 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
     const primaries = [...windows['primary']];
     const secondaries = [...windows['secondary']];
     const other = [...windows['other']];
+    const secondaryApps = [...secondaryAppClients];
 
-    printWindows(app, len, windows);
+    secondaries.sort((a, b) => a.caption < b.caption ? -1 : 1);
+    secondaryApps.sort((a, b) => a.caption < b.caption ? -1 : 1);
+
+    printWindows(app, windows);
 
     const primary = primaries[0];
+
+    const sharedPrimaries: KWin.AbstractClient[] = []; // secondary windows on primary screen
+    const sharedSecondaries: KWin.AbstractClient[] = []; // secondary windows on secondary screen
+
+    if (screenCount < 2) {
+        sharedPrimaries.push(...secondaries);
+        sharedPrimaries.push(...secondaryApps);
+    } else if (config.settings.multiScreenMultiSecondaryLayout === 'separate') {
+        sharedSecondaries.push(...secondaries)
+        if (secondaryAppConfig?.windowing === 'PreferPrimary' && secondaries.length > 0) {
+            sharedPrimaries.push(...secondaryApps)
+        } else {
+            sharedSecondaries.push(...secondaryApps)
+        }
+    } else {
+        sharedPrimaries.push(...secondaries)
+        sharedSecondaries.push(...secondaryApps)
+    }
 
     if (primary) {
         if (primaries.length > 1) {
             primaries.sort((a, b) => a.caption.length > b.caption.length
-                ? -1 : 1);
+                ? -1 : 1
+            );
 
             const toOther = primaries.splice(1, primaries.length - 1);
             print("too many primary windows; using", primary.caption, ", ignoring", toOther.map((c) => c.caption));
@@ -330,29 +358,28 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
         }
 
         if (primary.fullScreen) {
-            clientSetFullscreenOn(primary, config.settings, 0, secondaries ? secondaries.length : 0);
+            clientSetFullscreenOn(primary, config.settings, 0, sharedPrimaries.length);
         }
     }
 
-    secondaries.sort((a, b) => a.caption < b.caption ? -1 : 1);
+    for (const secondaries of [sharedPrimaries, sharedSecondaries]) {
+        for (const client of secondaries) {
+            const index = secondaries.indexOf(client) + 1;
 
-    for (const client of secondaries) {
-        const index = secondaries.indexOf(client) + 1;
-
-        if (index <= 4) { // max 4 secondary windows
-            if (primaryFullScreen) {
-                clientSetFullscreenOn(client, config.settings, index, secondaries.length);
-                client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
+            if (index <= 4) { // max 4 secondary windows
+                if (primaryFullScreen) {
+                    clientSetFullscreenOn(client, config.settings, index, secondaries.length);
+                    client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
+                } else {
+                    resetClient(client); // reset the geometry
+                    client.fullScreen = false;
+                    client.keepAbove = false;
+                }
             } else {
-                resetClient(client); // reset the geometry
-                client.fullScreen = false;
-                client.keepAbove = false;
+                print("too many secondary views; ignoring", client.caption);
             }
-        } else {
-            print("too many secondary views; ignoring", client.caption);
         }
     }
-
 
     for (const client of other) {
         print("handling other window:", client.caption);
@@ -361,13 +388,37 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
         client.setMaximize(true, true);
         // client.keepAbove = keepAbove && (!primaryFullScreen || (!secondaries && screenCount === 1));
     }
+
+    for (const client of unmanagedClients) {
+        workspace.sendClientToScreen(client, secondaryDisplay);
+    }
 }
-
-
 
 function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
     const caption = client.caption;
     const windowClass = client.resourceClass.toString();
+    if (secondaryAppConfig) {
+        // test secondary app
+
+        const matchesPrimary = secondaryAppConfig.primary.test(caption);
+        const matches = secondaryAppConfig.classes.some((wc) => { return windowClass.includes(wc); });
+
+        if (matches && matchesPrimary) {
+            switch (secondaryAppConfig.windowing) {
+                case 'Hidden':
+                    client.fullScreen = false;
+                    client.minimized = true;
+                // explicit fallthrough
+                case 'Unmanged':
+                    unmanagedClients.add(client);
+                    return null;
+                default:
+                    secondaryAppClients.add(client)
+                    return null;
+                    break;
+            }
+        }
+    }
 
     for (const app in appConfigs) {
         const config = appConfigs[app];
@@ -375,7 +426,6 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
         const matchesPrimary = config.primary.test(caption);
         const matchesSecondary = config.secondary.test(caption);
         const matches = config.classes.some((wc) => { return windowClass.includes(wc); });
-
 
         if (matches) {
             const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));
@@ -398,19 +448,12 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
             print("matched", caption, "with", res.app, "priority", res.type);
             return res;
-        } else if (secondaryAppConfig) {
-            // test secondary app
-
-            const matchesPrimary = secondaryAppConfig.primary.test(caption);
-            const matches = secondaryAppConfig.classes.some((wc) => { return windowClass.includes(wc); });
-
-            if (matches && matchesPrimary) {
-                // TODO::this
-            }
         }
     }
 
-    print(client.caption, 'with class', windowClass, 'not matched; ignoring')
+    print(client.caption, 'with class', windowClass, 'not matched; ignoring');
+
+    unmanagedClients.add(client);
 
     return null;
 }

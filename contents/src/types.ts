@@ -4,7 +4,10 @@ export type AppWindows = {
     [key in WindowType]: KWin.AbstractClient[]
 }
 
-export type WindowType = 'primary' | 'secondary' | 'other';
+export type WindowType =
+    'primary'
+    | 'secondary'
+    | 'other';
 
 export interface WindowConfig {
     app: string,
