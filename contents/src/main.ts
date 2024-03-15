@@ -1,4 +1,5 @@
-import { AppSettings, appConfigs, Layout, SecondaryAppWindowingBehavior, SecondaryAppConfig } from "./const";
+import { loadGeneralConfig, loadAppConfigs, loadSecondaryAppConfig, Layout, AppSettings } from "./config";
+import { AppWindows, WindowType } from "./types";
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
 print("!!!KWINSCRIPT!!!");
@@ -8,9 +9,6 @@ print("!!!KWINSCRIPT!!!");
 
 // Types
 
-type AppWindows = {
-    [key in WindowType]: KWin.AbstractClient[]
-}
 
 // Globals
 
@@ -20,6 +18,7 @@ let primaryDisplay = 0;
 let secondaryDisplay = 0;
 
 let normalClients: { [k: string]: AppWindows } = {};
+let secondaryAppClients: KWin.AbstractClient[] = [];
 const oldSettings: {
     [k: number]: {
         frameGeometry: QRect,
@@ -32,6 +31,9 @@ let primaryFullScreen = false;
 let oldPrimaryFullScreen = false;
 
 // Configuration
+
+const generalConfig = loadGeneralConfig();
+
 
 function setScreens() {
     print("Configuring screens");
@@ -53,7 +55,7 @@ function setScreens() {
         }
     }
 
-    if (swapScreens) {
+    if (generalConfig.swapScreens) {
         const tmp = primaryDisplay;
         primaryDisplay = secondaryDisplay;
         secondaryDisplay = tmp;
@@ -63,6 +65,7 @@ function setScreens() {
     print("secondary display: ", secondaryDisplay, ", geometry: ", workspace.clientArea(KWin.MaximizeArea, secondaryDisplay, 1));
 
     normalClients = {};
+    secondaryAppClients = [];
 
     const clients = workspace.clientList();
     for (const client of clients) {
@@ -71,124 +74,6 @@ function setScreens() {
 }
 
 setScreens();
-
-function readConfigCleaned(key: string, defaultValue?: any): any {
-    const value = readConfig(key, defaultValue);
-    if (typeof (value) === 'string') {
-        return value.replace(/"/g, "").trim();
-    }
-    return value;
-}
-
-/// Render primary window to smaller screen instead of larger one.
-const swapScreens: boolean = readConfigCleaned('swapScreens', false);
-
-/// Keep app windows above other windows
-const keepAbove: boolean = readConfigCleaned('keepAbove', true);
-
-print('General Settings:: keepAbove:', keepAbove, ', swapScreens:', swapScreens);
-
-// Cemu
-{
-    const cemuSingleScreenLayout: Layout = readConfigCleaned('cemuSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const cemuMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('cemuMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-    print('Cemu Settings:: single:', cemuSingleScreenLayout, ', multi:', cemuMultiScreenSingleSecondaryLayout);
-
-    for (const app of ['Cemu', 'Cemu (Proton)']) {
-        const settings = appConfigs[app].settings;
-        settings.singleScreenLayout = cemuSingleScreenLayout;
-        settings.multiScreenSingleSecondaryLayout = cemuMultiScreenSingleSecondaryLayout;
-    }
-}
-
-// Citra
-{
-    const citraSingleScreenLayout: Layout = readConfigCleaned('citraSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const citraMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('citraMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-
-    print('Citra Settings:: single:', citraSingleScreenLayout, ', multi:', citraMultiScreenSingleSecondaryLayout);
-
-    const settings = appConfigs['Citra'].settings;
-    settings.singleScreenLayout = citraSingleScreenLayout;
-    settings.multiScreenSingleSecondaryLayout = citraMultiScreenSingleSecondaryLayout;
-}
-
-// Dolphin
-{
-    const dolphinSingleScreenLayout: Layout = readConfigCleaned('dolphinSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const dolphinMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-    const dolphinMultiScreenMultiSecondaryLayout: Layout = readConfigCleaned('dolphinMultiScreenMultiSecondaryLayout', 'column-right')
-        .toLowerCase();
-    const dolphinBlacklist: string = readConfigCleaned('dolphinBlacklist', '')
-        .trim()
-        .toUpperCase();
-
-    print('Dolphin Settings:: single:', dolphinSingleScreenLayout,
-        ', multi1:', dolphinMultiScreenSingleSecondaryLayout,
-        ", multi+:", dolphinMultiScreenMultiSecondaryLayout,
-        ', blacklist:', dolphinBlacklist);
-
-    const settings = appConfigs['Dolphin'].settings;
-    settings.singleScreenLayout = dolphinSingleScreenLayout;
-    settings.multiScreenSingleSecondaryLayout = dolphinMultiScreenSingleSecondaryLayout;
-    settings.multiScreenMultiSecondaryLayout = dolphinMultiScreenMultiSecondaryLayout;
-    settings.blacklist = dolphinBlacklist
-        .split(',')
-        .filter((v) => v.trim().length > 0)
-        .map((v) => new RegExp(`^${v.trim()}`));
-}
-
-// Custom
-{
-    const primaryWindowMatcher: string = readConfigCleaned('customPrimaryWindowMatcher', '');
-    const secondaryWindowMatcher: string = readConfigCleaned('customSecondaryWindowMatcher', '');
-    const classes: string = readConfigCleaned('customWindowClasses', '');
-    const customSingleScreenLayout: Layout = readConfigCleaned('customSingleScreenLayout', 'column-right')
-        .toLowerCase();
-    const customMultiScreenSingleSecondaryLayout: Layout = readConfigCleaned('customMultiScreenSingleSecondaryLayout', 'separate')
-        .toLowerCase();
-    const customMultiScreenMultiSecondaryLayout: Layout = readConfigCleaned('customMultiScreenMultiSecondaryLayout', 'separate')
-        .toLowerCase();
-
-
-    if (primaryWindowMatcher.length > 0) {
-        appConfigs['Custom'] = {
-            primary: new RegExp(primaryWindowMatcher),
-            secondary: new RegExp(secondaryWindowMatcher),
-            classes: classes.length > 0
-                ? classes.split(',').map((v) => v.trim())
-                : [],
-            settings: {
-                singleScreenLayout: customSingleScreenLayout,
-                multiScreenSingleSecondaryLayout: customMultiScreenSingleSecondaryLayout,
-                multiScreenMultiSecondaryLayout: customMultiScreenMultiSecondaryLayout,
-                secondaryWindowAspectRatio: 16 / 9 // TODO::this should really be recomputed based on the window location, but this is good enough for now
-            }
-        }
-    }
-}
-
-// Secondary App
-let secondaryAppConfig: SecondaryAppConfig | null = null;
-{
-    const primaryWindowMatcher: string = readConfigCleaned('secondaryAppPrimaryWindowMatcher', '');
-    const classes: string[] = readConfigCleaned('secondaryAppClasses', '').split(',').map((v: string) => v.trim());
-    const windowingBehavior: SecondaryAppWindowingBehavior = readConfigCleaned('secondaryAppWindowingBehavior', 'PreferSecondary')
-
-    if (primaryWindowMatcher.length > 0 && classes.length > 0) {
-        secondaryAppConfig = {
-            primary: new RegExp(primaryWindowMatcher),
-            classes: classes,
-            windowing: windowingBehavior
-        }
-    }
-}
 
 // Script logic
 
@@ -474,17 +359,11 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
         workspace.sendClientToScreen(client, secondaryDisplay);
         client.fullScreen = false;
         client.setMaximize(true, true);
-        client.keepAbove = keepAbove && (!primaryFullScreen || (!secondaries && screenCount === 1));
+        // client.keepAbove = keepAbove && (!primaryFullScreen || (!secondaries && screenCount === 1));
     }
 }
 
-type WindowType = 'primary' | 'secondary' | 'other';
 
-interface WindowConfig {
-    app: string,
-    type: WindowType,
-    settings: AppSettings,
-}
 
 function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
     const caption = client.caption;
@@ -495,7 +374,9 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
         const matchesPrimary = config.primary.test(caption);
         const matchesSecondary = config.secondary.test(caption);
-        const matches = config.classes.some((wc) => { return windowClass.includes(wc); })
+        const matches = config.classes.some((wc) => { return windowClass.includes(wc); });
+
+
         if (matches) {
             const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));
             if (blacklisted) {
@@ -517,6 +398,15 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
             print("matched", caption, "with", res.app, "priority", res.type);
             return res;
+        } else if (secondaryAppConfig) {
+            // test secondary app
+
+            const matchesPrimary = secondaryAppConfig.primary.test(caption);
+            const matches = secondaryAppConfig.classes.some((wc) => { return windowClass.includes(wc); });
+
+            if (matches && matchesPrimary) {
+                // TODO::this
+            }
         }
     }
 
