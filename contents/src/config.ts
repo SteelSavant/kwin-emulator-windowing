@@ -42,7 +42,7 @@ interface SecondaryAppConfig {
 export type SecondaryAppWindowingBehavior =
     "PreferSecondary" // If main layout is Separate, prefer secondary screen
     | "PreferPrimary" // If main layout is Separate, perefer primary screen
-    | "Unmanged" // Don't manage secondary app windows
+    | "Unmanaged" // Don't manage secondary app windows
     | "Hidden" // Like unmanaged, but minimize the windows
     ;
 
@@ -59,8 +59,8 @@ export function loadGeneralConfig(): GeneralConfig {
 }
 
 export function loadSecondaryAppConfig(): SecondaryAppConfig | null {
-    const primaryWindowMatcher: string = readConfigCleaned('secondaryAppPrimaryWindowMatcher', '');
-    const classes: string[] = readConfigCleaned('secondaryAppClasses', '').split(',').map((v: string) => v.trim());
+    const primaryWindowMatcher: string = readConfigCleaned('secondaryAppWindowMatcher', '');
+    const classes: string[] = readConfigCleaned('secondaryAppWindowClasses', '').split(',').map((v: string) => v.trim());
     const windowingBehavior: SecondaryAppWindowingBehavior = readConfigCleaned('secondaryAppWindowingBehavior', 'PreferSecondary')
 
     if (primaryWindowMatcher.length > 0 && classes.length > 0) {

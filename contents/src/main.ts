@@ -409,13 +409,12 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
                     client.fullScreen = false;
                     client.minimized = true;
                 // explicit fallthrough
-                case 'Unmanged':
+                case 'Unmanaged':
                     unmanagedClients.add(client);
                     return null;
                 default:
                     secondaryAppClients.add(client)
                     return null;
-                    break;
             }
         }
     }
