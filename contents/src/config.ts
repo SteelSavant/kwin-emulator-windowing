@@ -31,7 +31,8 @@ export type Layout =
     | 'square-left'  // secondaries in a square left of primary (only useful on widescreen displays)
     | 'square-right'  // secondaries in a square right of primary (only useful on widescreen displays)
     | 'column-left'  // secondaries in a column left of primary
-    | 'column-right'; // secondaries in a column right of primary
+    | 'column-right' // secondaries in a column right of primary
+    ;
 
 interface SecondaryAppConfig {
     primary: RegExp
