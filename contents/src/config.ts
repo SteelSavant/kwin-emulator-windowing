@@ -16,7 +16,7 @@ export interface AppSettings {
     secondaryWindowAspectRatio: number,
     singleScreenLayout: Layout,
     multiScreenSingleSecondaryLayout: Layout,
-    multiScreenMultiSecondaryLayout?: Layout
+    multiScreenMultiSecondaryLayout: Layout
     blacklist?: RegExp[],
     /// Some emulators (Cemu Proton) require delay to handle windows properly;
     /// delay breaks dolphin on display reconnect, so its configurable
@@ -88,6 +88,7 @@ export function loadAppConfigs(): { [k: string]: AppConfig } {
                 secondaryWindowAspectRatio: 16 / 9,
                 singleScreenLayout: 'column-right',
                 multiScreenSingleSecondaryLayout: 'separate',
+                multiScreenMultiSecondaryLayout: 'separate',
             }
         },
         "Cemu (Proton)": {
@@ -98,6 +99,7 @@ export function loadAppConfigs(): { [k: string]: AppConfig } {
                 secondaryWindowAspectRatio: 16 / 9,
                 singleScreenLayout: 'column-right',
                 multiScreenSingleSecondaryLayout: 'separate',
+                multiScreenMultiSecondaryLayout: 'separate',
                 delayReconfigure: true,
             }
         },
@@ -109,6 +111,7 @@ export function loadAppConfigs(): { [k: string]: AppConfig } {
                 secondaryWindowAspectRatio: 4 / 3,
                 singleScreenLayout: 'column-right',
                 multiScreenSingleSecondaryLayout: 'separate',
+                multiScreenMultiSecondaryLayout: 'separate',
                 watchCaption: true,
             }
         },
@@ -151,6 +154,8 @@ function loadCemuSettings(config: AppConfig) // Cemu
     const settings = config.settings;
     settings.singleScreenLayout = cemuSingleScreenLayout;
     settings.multiScreenSingleSecondaryLayout = cemuMultiScreenSingleSecondaryLayout;
+    settings.multiScreenMultiSecondaryLayout = cemuMultiScreenSingleSecondaryLayout;
+
 }
 
 function loadCitraSettings(config: AppConfig) {
@@ -164,6 +169,7 @@ function loadCitraSettings(config: AppConfig) {
     const settings = config.settings;
     settings.singleScreenLayout = citraSingleScreenLayout;
     settings.multiScreenSingleSecondaryLayout = citraMultiScreenSingleSecondaryLayout;
+    settings.multiScreenMultiSecondaryLayout = citraMultiScreenSingleSecondaryLayout;
 }
 
 function loadDolphinSettings(config: AppConfig) {

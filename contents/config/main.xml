@@ -162,15 +162,15 @@
         </entry>
 
 
-        <entry name="customPrimaryWindowMatcher">
+        <entry name="customPrimaryWindowMatcher" type="String">
             <label>Regex to match primary window</label>
             <default></default>
         </entry>
-        <entry name="customSecondaryWindowMatcher">
+        <entry name="customSecondaryWindowMatcher" type="String">
             <label>Regex to match secondary windows</label>
             <default></default>
         </entry>
-        <entry name="customWindowClasses">
+        <entry name="customWindowClasses" type="String">
             <label>Comma separated list of window classes to filter by</label>
             <default></default>
         </entry>
@@ -238,7 +238,7 @@
             <label>Regexp to use when matching secondary app windows</label>
             <default></default>
         </entry>
-        <entry name="secondaryAppWindowClasses">
+        <entry name="secondaryAppWindowClasses" type="String">
             <label>Comma separated list of window classes to filter by</label>
             <default></default>
         </entry>

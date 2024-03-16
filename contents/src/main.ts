@@ -292,7 +292,8 @@ function resetPrimaryFullScreen(config: WindowConfig, windows: AppWindows) {
 function calcNumWindows(windows: AppWindows): number {
     return windows['primary'].length
         + windows['secondary'].length
-        + windows['other'].length;
+        + windows['other'].length
+        + secondaryAppClients.size;
 }
 
 function printWindows(app: string, windows: AppWindows): void {
@@ -303,6 +304,8 @@ function printWindows(app: string, windows: AppWindows): void {
     print('primary:', windows['primary'].map((p) => p.caption));
     print('secondary:', windows['secondary'].map((p) => p.caption));
     print('other:', windows['other'].map((p) => p.caption));
+    print('secondary app:', [...secondaryAppClients].map((p) => p.caption));
+
 }
 
 function setClientWindows(config: WindowConfig, windows: AppWindows) {
@@ -331,19 +334,26 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
     const sharedPrimaries: KWin.AbstractClient[] = []; // secondary windows on primary screen
     const sharedSecondaries: KWin.AbstractClient[] = []; // secondary windows on secondary screen
 
+    const primarySettings = { ...config.settings };
+    const secondarySettings = { ...config.settings };
+
     if (screenCount < 2) {
         sharedPrimaries.push(...secondaries);
         sharedPrimaries.push(...secondaryApps);
     } else if (config.settings.multiScreenMultiSecondaryLayout === 'separate') {
         sharedSecondaries.push(...secondaries)
-        if (secondaryAppConfig?.windowing === 'PreferPrimary' && secondaries.length > 0) {
+        if (secondaryApps.length > 0 && secondaryAppConfig?.windowing === 'PreferPrimary' && secondaries.length > 0) {
             sharedPrimaries.push(...secondaryApps)
+            primarySettings.multiScreenMultiSecondaryLayout = 'column-right'
+            primarySettings.multiScreenSingleSecondaryLayout = 'column-right'
         } else {
             sharedSecondaries.push(...secondaryApps)
         }
     } else {
         sharedPrimaries.push(...secondaries)
         sharedSecondaries.push(...secondaryApps)
+        secondarySettings.multiScreenSingleSecondaryLayout = 'separate';
+        secondarySettings.multiScreenMultiSecondaryLayout = 'separate';
     }
 
     if (primary) {
@@ -358,17 +368,20 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
         }
 
         if (primary.fullScreen) {
-            clientSetFullscreenOn(primary, config.settings, 0, sharedPrimaries.length);
+            clientSetFullscreenOn(primary, primarySettings, 0, sharedPrimaries.length);
         }
     }
 
-    for (const secondaries of [sharedPrimaries, sharedSecondaries]) {
+    for (const { settings, secondaries } of [
+        { settings: primarySettings, secondaries: sharedPrimaries },
+        { settings: secondarySettings, secondaries: sharedSecondaries }
+    ]) {
         for (const client of secondaries) {
             const index = secondaries.indexOf(client) + 1;
 
             if (index <= 4) { // max 4 secondary windows
                 if (primaryFullScreen) {
-                    clientSetFullscreenOn(client, config.settings, index, secondaries.length);
+                    clientSetFullscreenOn(client, settings, index, secondaries.length);
                     client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
                 } else {
                     resetClient(client); // reset the geometry
@@ -465,14 +478,16 @@ function handleClient(client: KWin.AbstractClient): void {
         client.captionChanged.connect(setScreens);
     }
 
-    if (client.normalWindow && windowConfig) {
-        if (!oldSettings[client.windowId]) {
-            oldSettings[client.windowId] = {
-                frameGeometry: client.frameGeometry,
-                fullScreen: client.fullScreen,
-                keepAbove: client.keepAbove,
-            }
+    if (!oldSettings[client.windowId]) {
+        oldSettings[client.windowId] = {
+            frameGeometry: client.frameGeometry,
+            fullScreen: client.fullScreen,
+            keepAbove: client.keepAbove,
         }
+    }
+
+    if (client.normalWindow && windowConfig) {
+
 
         const app = windowConfig.app;
 
