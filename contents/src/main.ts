@@ -75,6 +75,16 @@ function setScreens() {
     for (const client of clients) {
         handleClient(client);
     }
+
+    for (const app in normalClients) {
+        const windows = normalClients[app];
+        assertWindowsValid(windows);
+        setClientWindows({
+            app: app,
+            type: "primary",
+            settings: appConfigs[app].settings
+        }, windows);
+    }
 }
 
 setScreens();
@@ -473,6 +483,7 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
 function handleClient(client: KWin.AbstractClient): void {
     const windowConfig = getWindowConfig(client);
+
     if (windowConfig?.settings.watchCaption) {
         client.captionChanged.disconnect(setScreens);
         client.captionChanged.connect(setScreens);
@@ -487,8 +498,6 @@ function handleClient(client: KWin.AbstractClient): void {
     }
 
     if (client.normalWindow && windowConfig) {
-
-
         const app = windowConfig.app;
 
         if (windowConfig.type === 'primary') {
@@ -529,8 +538,7 @@ function handleClient(client: KWin.AbstractClient): void {
             normalClients[app] = windows;
             // print(client.caption, "added:", windows);
 
-            assertWindowsValid(windows);
-            setClientWindows(windowConfig, windows);
+
         }
     }
 }
@@ -565,7 +573,7 @@ function delay(milliseconds: number, callbackFunc: () => void) {
 
 let removeId = 0;
 
-workspace.clientAdded.connect(handleClient);
+workspace.clientAdded.connect(setScreens);
 workspace.clientRemoved.connect((client) => {
     if (client.windowId in oldSettings) {
         // reset client; things will break otherwise
