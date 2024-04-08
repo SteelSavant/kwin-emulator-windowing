@@ -447,7 +447,7 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
 
         const matchesPrimary = config.primary.test(caption);
         const matchesSecondary = config.secondary.test(caption);
-        const matches = config.classes.some((wc) => { return windowClass.includes(wc); });
+        const matches = config.classes.some((wc) => { return windowClass.toLowerCase().includes(wc.toLowerCase()); });
 
         if (matches) {
             const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));

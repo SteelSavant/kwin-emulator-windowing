@@ -210,6 +210,14 @@ function loadCustomConfig(): AppConfig | null {
         .toLowerCase();
 
     if (primaryWindowMatcher.length > 0) {
+        print('Custom Settings::primary_window:', primaryWindowMatcher,
+            ", secondary_window:", secondaryWindowMatcher,
+            ", classes:", classes,
+            ", single:", customSingleScreenLayout,
+            ', multi1:', customMultiScreenSingleSecondaryLayout,
+            ", multi+:", customMultiScreenMultiSecondaryLayout,
+        )
+
         return {
             primary: new RegExp(primaryWindowMatcher),
             secondary: new RegExp(secondaryWindowMatcher),
