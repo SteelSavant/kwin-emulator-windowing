@@ -419,12 +419,12 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
 function getWindowConfig(client: KWin.AbstractClient): WindowConfig | null {
     const caption = client.caption;
-    const windowClass = client.resourceClass.toString();
+    const windowClass = client.resourceClass.toString().toLowerCase();
     if (secondaryAppConfig) {
         // test secondary app
 
         const matchesPrimary = secondaryAppConfig.primary.test(caption);
-        const matches = secondaryAppConfig.classes.some((wc) => { return windowClass.includes(wc); });
+        const matches = secondaryAppConfig.classes.some((wc) => { return windowClass.includes(wc.toLowerCase()); });
 
         if (matches && matchesPrimary) {
             switch (secondaryAppConfig.windowing) {
