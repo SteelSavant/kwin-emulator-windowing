@@ -34,17 +34,23 @@ export type Layout =
     | 'column-right' // secondaries in a column right of primary
     ;
 
-interface SecondaryAppConfig {
+export interface SecondaryAppConfig {
     primary: RegExp
     classes: string[]
-    windowing: SecondaryAppWindowingBehavior
+    screenPreference: SecondaryAppScreenPreference
+    windowingBehavior: SecondaryAppWindowingBehavior
 }
 
+export type SecondaryAppScreenPreference =
+    "PreferSecondary" // Prefer secondary screen in fullscreen, non-app screen otherwise
+    | "PreferPrimary" // Prefer secondary screen in fullscreen, non-app screen otherwise
+    ;
+
 export type SecondaryAppWindowingBehavior =
-    "PreferSecondary" // If main layout is Separate, prefer secondary screen
-    | "PreferPrimary" // If main layout is Separate, perefer primary screen
-    | "Unmanaged" // Don't manage secondary app windows
-    | "Hidden" // Like unmanaged, but minimize the windows
+    "Fullscreen"
+    | "Maximized"
+    | "Minimized"
+    | "Unmanaged"
     ;
 
 export function loadGeneralConfig(): GeneralConfig {
@@ -59,23 +65,32 @@ export function loadGeneralConfig(): GeneralConfig {
     }
 }
 
-export function loadSecondaryAppConfig(): SecondaryAppConfig | null {
-    const primaryWindowMatcher: string = readConfigCleaned('secondaryAppWindowMatcher', '');
-    const classes: string[] = readConfigCleaned('secondaryAppWindowClasses', '').split(',').map((v: string) => v.trim());
-    const windowingBehavior: SecondaryAppWindowingBehavior = readConfigCleaned('secondaryAppWindowingBehavior', 'PreferSecondary')
+export function loadSecondaryAppConfigs(): SecondaryAppConfig[] {
+    const values: SecondaryAppConfig[] = [];
 
-    if (primaryWindowMatcher.length > 0 && classes.length > 0) {
-        print("SecondaryApp settings:: primary:", primaryWindowMatcher, 'classes:', classes, 'windowing:', windowingBehavior);
+    for (let i = 0; i < Math.max(); i++) {
 
-        return {
-            primary: new RegExp(primaryWindowMatcher),
-            classes: classes,
-            windowing: windowingBehavior
+        const primaryWindowMatcher: string = readConfigCleaned('secondaryAppWindowMatcher' + i, '');
+        const classes: string[] = readConfigCleaned('secondaryAppWindowClasses' + i, '').split(',').map((v: string) => v.trim());
+        const windowingBehavior: SecondaryAppWindowingBehavior = readConfigCleaned('secondaryAppWindowingBehavior' + i, 'Fullscreen')
+        const screenPreference: SecondaryAppScreenPreference = readConfigCleaned('secondaryAppWindowingBehavior' + i, "PreferSecondary")
+
+        if (primaryWindowMatcher.length > 0 && classes.length > 0) {
+            print("SecondaryApp settings:: primary:", primaryWindowMatcher, 'classes:', classes, 'windowing:', windowingBehavior);
+
+            values.push({
+                primary: new RegExp(primaryWindowMatcher),
+                classes,
+                screenPreference,
+                windowingBehavior
+            })
+        } else {
+            print('no secondary app config available for ' + i);
+            break;
         }
-    } else {
-        print('no secondary app config available');
-        return null
     }
+
+    return values;
 }
 
 export function loadAppConfigs(): { [k: string]: AppConfig } {
