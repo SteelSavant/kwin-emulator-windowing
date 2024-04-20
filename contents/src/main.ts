@@ -2,7 +2,7 @@ import { loadGeneralConfig, loadAppConfigs, loadSecondaryAppConfigs, Layout, App
 import { AppWindows, ClientWithMaybeSecondaryConfig, WindowConfig, WindowType } from "./types";
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
-print("!!!KWINSCRIPT!!!");
+print("!!!EMULATOR_WINDOWING_KWINSCRIPT!!!");
 
 // TODO::this script is fairly naive about which screen should be selected; it just picks the smallest and largest.
 // Consider reading the screens names (as reported by qdbus org.kde.KWin /KWin supportInformation, and possibly workspace.supportInformation()), and using dbus queries to get the ids.
