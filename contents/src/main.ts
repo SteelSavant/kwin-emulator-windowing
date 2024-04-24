@@ -127,7 +127,7 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
     const [screen, otherScreen] = index === 0 || layout != 'separate'
         ? [primaryDisplay, secondaryDisplay]
         : [secondaryDisplay, primaryDisplay];
-    print('setting client', client.caption, 'on screen', screen, 'with layout', layout, 'index', index);
+    print('setting client', client.caption, 'on screen', screen, 'with layout', layout, 'index', index, 'with', secondaryCount, 'secondaries');
 
     const geometry = workspace.clientArea(KWin.ScreenArea, screen, workspace.currentDesktop);
 
@@ -141,6 +141,8 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
 
     // swap layout engine where possible to simplify logic
 
+    const originalLayout = layout;
+
     if (secondaryCount < 3) {
         layout = layout.replace('square', 'column') as Layout;
     }
@@ -149,7 +151,7 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
         layout = 'separate';
     }
 
-    print('layout set to', layout, 'after analysis');
+    print('layout set to', layout, 'from', originalLayout, 'after analysis');
 
     switch (layout) {
         case 'separate':
@@ -289,18 +291,6 @@ function clientSetFullscreenOn(client: KWin.AbstractClient, settings: AppSetting
     }
 }
 
-function resetPrimaryFullScreen(config: WindowConfig, windows: AppWindows) {
-    if (config.type != 'primary') {
-        const primary = windows['primary'][0];
-        if (primary) {
-            if (primary.fullScreen != primaryFullScreen) {
-                print("resetting fullscreen to", primaryFullScreen);
-                primary.fullScreen = primaryFullScreen;
-            }
-        }
-    }
-}
-
 function calcNumWindows(windows: AppWindows): number {
     return windows['primary'].length
         + windows['secondary'].length
@@ -320,15 +310,9 @@ function printWindows(app: string, windows: AppWindows): void {
 }
 
 function setClientWindows(config: WindowConfig, windows: AppWindows) {
-    resetPrimaryFullScreen(config, windows);
+    print('setting client windows for app', config.app);
 
     const app = config.app;
-    const len = calcNumWindows(windows);
-
-    if (len <= 1) {
-        // no meaningful work to do, skipping
-        return;
-    }
 
     const primaries = [...windows['primary']]
     const secondaries = windows['secondary'].map((v) => { return { client: v } });
@@ -340,7 +324,6 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
     secondaryApps.sort((a, b) => a.client.caption < b.client.caption ? -1 : 1);
 
     const fullscreenSecondaryApps = secondaryApps.filter((v) => v.secondaryConfig?.windowingBehavior === 'Fullscreen');
-
 
     printWindows(app, windows);
 
@@ -362,19 +345,30 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
             sharedPrimaries.push(...secondaries)
         }
 
-
         for (const app of fullscreenSecondaryApps) {
-            if (
-                app.secondaryConfig?.screenPreference === 'PreferPrimary'
-                && secondaries.length > 0) {
+            print('current screen preference for secondary app:', app.secondaryConfig?.screenPreference);
+            if (app.secondaryConfig?.screenPreference === 'PreferPrimary') {
                 sharedPrimaries.push(app)
-                primarySettings.multiScreenMultiSecondaryLayout = 'column-right'
-                primarySettings.multiScreenSingleSecondaryLayout = 'column-right'
+                const separateLayout: Layout = 'separate';
+                if (primarySettings.multiScreenSingleSecondaryLayout === separateLayout) {
+                    primarySettings.multiScreenSingleSecondaryLayout = 'column-right'
+                }
+                if (primarySettings.multiScreenMultiSecondaryLayout === separateLayout) {
+                    primarySettings.multiScreenMultiSecondaryLayout = 'column-right'
+                }
+
+                print('set secondary app to primary screen; primary settings single:',
+                    primarySettings.multiScreenSingleSecondaryLayout,
+                    'multi:',
+                    primarySettings.multiScreenMultiSecondaryLayout,
+                );
             } else {
                 sharedSecondaries.push(app)
                 secondarySettings.multiScreenSingleSecondaryLayout = 'separate';
                 secondarySettings.multiScreenMultiSecondaryLayout = 'separate';
+                print('sending secondary app to secondary screen');
             }
+            print('handled secondary app', app.client.caption);
         }
     }
 
@@ -391,41 +385,42 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
         if (primary.fullScreen) {
             clientSetFullscreenOn(primary, primarySettings, 0, sharedPrimaries.length);
-        }
-    }
 
-    for (const { settings, secondaries } of [
-        { settings: primarySettings, secondaries: sharedPrimaries },
-        { settings: secondarySettings, secondaries: sharedSecondaries }
-    ]) {
-        for (const client of secondaries) {
-            const index = secondaries.indexOf(client) + 1;
+            for (const { settings, secondaries } of [
+                { settings: primarySettings, secondaries: sharedPrimaries },
+                { settings: secondarySettings, secondaries: sharedSecondaries }
+            ]) {
+                for (const client of secondaries) {
+                    const index = secondaries.indexOf(client) + 1;
 
-            if (index <= 4) { // max 4 secondary windows
-                if (primaryFullScreen) {
-                    clientSetFullscreenOn(client.client, settings, index, secondaries.length);
-                    client.client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
-                } else {
-                    resetClient(client.client); // reset the geometry
-                    client.client.fullScreen = false;
-                    client.client.keepAbove = false;
+                    if (index <= 4) { // max 4 secondary windows
+                        if (primaryFullScreen) {
+                            clientSetFullscreenOn(client.client, settings, index, secondaries.length);
+                            client.client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
+                        } else {
+                            resetClient(client.client); // reset the geometry
+                            client.client.fullScreen = false;
+                            client.client.keepAbove = false;
+                        }
+                    } else {
+                        print("too many secondary views; ignoring", client.client.caption);
+                    }
                 }
-            } else {
-                print("too many secondary views; ignoring", client.client.caption);
+            }
+
+
+            for (const client of other) {
+                print("handling other window:", client.caption);
+                workspace.sendClientToScreen(client, secondaryDisplay);
+                client.fullScreen = false;
+                client.setMaximize(true, true);
+                // client.keepAbove = keepAbove && (!primaryFullScreen || (!secondaries && screenCount === 1));
+            }
+
+            for (const client of unmanagedClients) {
+                workspace.sendClientToScreen(client, secondaryDisplay);
             }
         }
-    }
-
-    for (const client of other) {
-        print("handling other window:", client.caption);
-        workspace.sendClientToScreen(client, secondaryDisplay);
-        client.fullScreen = false;
-        client.setMaximize(true, true);
-        // client.keepAbove = keepAbove && (!primaryFullScreen || (!secondaries && screenCount === 1));
-    }
-
-    for (const client of unmanagedClients) {
-        workspace.sendClientToScreen(client, secondaryDisplay);
     }
 }
 
@@ -475,7 +470,9 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | ClientWith
                 case 'Minimized':
                     client.fullScreen = false;
                     client.minimized = true;
-                // explicit fallthrough
+
+                    unmanagedClients.add(client);
+                    return null;
                 case 'Unmanaged':
                     unmanagedClients.add(client);
                     return null;
@@ -510,12 +507,7 @@ function isWindowConfig(config: any): config is WindowConfig {
 function handleClient(client: KWin.AbstractClient): void {
     const windowConfig = getWindowConfig(client);
 
-    if (isWindowConfig(windowConfig)) {
-        if (windowConfig?.settings.watchCaption) {
-            client.captionChanged.disconnect(setScreens);
-            client.captionChanged.connect(setScreens);
-        }
-
+    if (windowConfig) {
         if (!oldSettings[client.windowId]) {
             oldSettings[client.windowId] = {
                 frameGeometry: client.frameGeometry,
@@ -523,8 +515,16 @@ function handleClient(client: KWin.AbstractClient): void {
                 keepAbove: client.keepAbove,
             }
         }
+    }
 
-        if (client.normalWindow && windowConfig) {
+    if (isWindowConfig(windowConfig)) {
+        if (windowConfig?.settings.watchCaption) {
+            client.captionChanged.disconnect(setScreens);
+            client.captionChanged.connect(setScreens);
+        }
+
+
+        if (client.normalWindow) {
             const app = windowConfig.app;
 
             if (windowConfig.type === 'primary') {
@@ -564,12 +564,8 @@ function handleClient(client: KWin.AbstractClient): void {
                 windows[windowConfig.type] = scope ? [...scope, client] : [client];
                 normalClients[app] = windows;
                 // print(client.caption, "added:", windows);
-
-
             }
         }
-    } else if (windowConfig !== null) {
-        // TODO::handle secondary
     }
 }
 
@@ -646,8 +642,17 @@ workspace.clientRemoved.connect((client) => {
             // print(client.caption, "removed, remaining:", windows.map((s) => s.map((w) => w.caption)));
             assertWindowsValid(windows);
             setClientWindows(config, windows);
-        } else if (config !== null) {
-            // TODO::handle secondary
+        }
+        else if (config) { // config must be secondary app
+            print('deleting secondary app client', client.windowId)
+            const config = getWindowConfig(client);
+            if (config && !isWindowConfig(config)) {
+                delete secondaryAppClients[client.windowId]
+                if (config.secondaryConfig?.windowingBehavior === 'Fullscreen') {
+                    print('resetting screens after removing client')
+                    setScreensOnDelay([200]);
+                }
+            }
         }
     }
 })

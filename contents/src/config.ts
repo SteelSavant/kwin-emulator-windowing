@@ -68,12 +68,12 @@ export function loadGeneralConfig(): GeneralConfig {
 export function loadSecondaryAppConfigs(): SecondaryAppConfig[] {
     const values: SecondaryAppConfig[] = [];
 
-    for (let i = 0; i < Math.max(); i++) {
+    for (let i = 0; i < 1000; i++) {
 
         const primaryWindowMatcher: string = readConfigCleaned('secondaryAppWindowMatcher' + i, '');
         const classes: string[] = readConfigCleaned('secondaryAppWindowClasses' + i, '').split(',').map((v: string) => v.trim());
         const windowingBehavior: SecondaryAppWindowingBehavior = readConfigCleaned('secondaryAppWindowingBehavior' + i, 'Fullscreen')
-        const screenPreference: SecondaryAppScreenPreference = readConfigCleaned('secondaryAppWindowingBehavior' + i, "PreferSecondary")
+        const screenPreference: SecondaryAppScreenPreference = readConfigCleaned('secondaryAppScreenPreference' + i, "PreferSecondary")
 
         if (primaryWindowMatcher.length > 0 && classes.length > 0) {
             print("SecondaryApp settings:: primary:", primaryWindowMatcher, 'classes:', classes, 'windowing:', windowingBehavior);
@@ -85,10 +85,12 @@ export function loadSecondaryAppConfigs(): SecondaryAppConfig[] {
                 windowingBehavior
             })
         } else {
-            print('no secondary app config available for ' + i);
+            print('no secondary app config available at index' + i);
             break;
         }
     }
+
+    print('loaded', values.length, 'secondary apps');
 
     return values;
 }
