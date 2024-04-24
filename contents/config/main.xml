@@ -270,7 +270,7 @@
                     <label>Unmanaged</label>
                 </choice>
             </choices>
-            <default>0</default> <!--PreferSecondary-->
+            <default>0</default> <!--Fullscreen-->
         </entry>
     </group>
 </kcfg>
