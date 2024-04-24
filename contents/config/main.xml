@@ -234,15 +234,15 @@
             </choices>
             <default>0</default> <!--Column-Right-->
         </entry>
-        <entry name="secondaryAppWindowMatcher" type="String">
+        <entry name="secondaryAppWindowMatcher0" type="String">
             <label>Regexp to use when matching secondary app windows</label>
             <default></default>
         </entry>
-        <entry name="secondaryAppWindowClasses" type="String">
+        <entry name="secondaryAppWindowClasses0" type="String">
             <label>Comma separated list of window classes to filter by</label>
             <default></default>
         </entry>
-         <entry name="secondaryAppWindowingBehavior" type="Enum">
+         <entry name="secondaryAppScreenPreference0" type="Enum">
             <label>Windowing Behavior for Secondary Apps</label>
             <choices>
                 <choice name="PreferSecondary">
@@ -251,14 +251,26 @@
                 <choice name="PreferPrimary">
                     <label>Prefer Primary</label>
                 </choice>
+            </choices>
+            <default>0</default> <!--PreferSecondary-->
+        </entry>
+         <entry name="secondaryAppWindowingBehavior0" type="Enum">
+            <label>Windowing Behavior for Secondary Apps</label>
+            <choices>
+                <choice name="Fullscreen">
+                    <label>Fullscreen</label>
+                </choice>
+                <choice name="Maximized">
+                    <label>Maximized</label>
+                </choice>
+                <choice name="Minimized">
+                    <label>Minimized</label>
+                </choice>
                 <choice name="Unmanaged">
                     <label>Unmanaged</label>
                 </choice>
-                <choice name="Hidden">
-                    <label>Hidden</label>
-                </choice>
             </choices>
-            <default>0</default> <!--PreferSecondary-->
+            <default>0</default> <!--Fullscreen-->
         </entry>
     </group>
 </kcfg>
