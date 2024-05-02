@@ -121,9 +121,9 @@ export function loadAppConfigs(): { [k: string]: AppConfig } {
             }
         },
         "Citra": {
-            classes: ["citra", "citra-qt"],
-            primary: /^Citra[^\|]+\|[^\|]+$|^Citra[^\|]+\|[^\|]+\|[^\|]+Primary[^\|]*$/,
-            secondary: /^Citra.*Secondary/,
+            classes: ["citra", "citra-qt", "lime-qt", "lime3ds"],
+            primary: /^Citra[^\|]+\|[^\|]+$|^Citra[^\|]+\|[^\|]+\|[^\|]+Primary[^\|]*$|^Lime3DS[^\|]+\|[^\|]+$|^Lime3DS[^\|]+\|[^\|]+\|[^\|]+Primary[^\|]*$/,
+            secondary: /^Citra.*Secondary|Lime3DS.*Secondary/,
             settings: {
                 secondaryWindowAspectRatio: 4 / 3,
                 singleScreenLayout: 'column-right',

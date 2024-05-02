@@ -327,6 +327,10 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
     printWindows(app, windows);
 
+
+    primaries.sort((a, b) => a.caption.length > b.caption.length
+        ? -1 : 1 // sort primaries so that the longest window title gets selected
+    );
     const primary = primaries[0];
 
     const sharedPrimaries: ClientWithMaybeSecondaryConfig[] = []; // secondary windows on primary screen
@@ -374,9 +378,7 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
     if (primary) {
         if (primaries.length > 1) {
-            primaries.sort((a, b) => a.caption.length > b.caption.length
-                ? -1 : 1
-            );
+
 
             const toOther = primaries.splice(1, primaries.length - 1);
             print("too many primary windows; using", primary.caption, ", ignoring", toOther.map((c) => c.caption));

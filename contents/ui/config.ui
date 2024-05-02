@@ -224,7 +224,7 @@
       </size>
      </property>
      <property name="title">
-      <string>Citra</string>
+      <string>Citra/Lime3DS</string>
      </property>
      <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
