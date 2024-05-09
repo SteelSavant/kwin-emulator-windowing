@@ -606,7 +606,8 @@ workspace.clientAdded.connect((client) => {
         if (isWindowConfig(config)) {
             if (config.type === 'primary') {
                 // ideally, we would also fullscreen here,
-                // but Citra breaks badly
+                // but Citra breaks badly, and it may not actually
+                // be the desired user behavior.
                 workspace.sendClientToScreen(client, primaryDisplay);
             }
         } else {
