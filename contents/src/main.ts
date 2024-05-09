@@ -378,8 +378,6 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
 
     if (primary) {
         if (primaries.length > 1) {
-
-
             const toOther = primaries.splice(1, primaries.length - 1);
             print("too many primary windows; using", primary.caption, ", ignoring", toOther.map((c) => c.caption));
             other.push(...toOther);
@@ -601,7 +599,23 @@ function delay(milliseconds: number, callbackFunc: () => void) {
 
 let removeId = 0;
 
-workspace.clientAdded.connect(setScreens);
+workspace.clientAdded.connect((client) => {
+    if (!(client.windowId in oldSettings)) {
+        const config = getWindowConfig(client);
+
+        if (isWindowConfig(config)) {
+            if (config.type === 'primary') {
+                // ideally, we would also fullscreen here,
+                // but Citra breaks badly
+                workspace.sendClientToScreen(client, primaryDisplay);
+            }
+        } else {
+            workspace.sendClientToScreen(client, secondaryDisplay);
+        }
+
+    }
+    setScreensOnDelay([200]);
+});
 workspace.clientRemoved.connect((client) => {
     if (client.windowId in oldSettings) {
         // reset client; things will break otherwise
