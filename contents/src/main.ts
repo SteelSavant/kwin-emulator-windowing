@@ -1,4 +1,4 @@
-import { loadGeneralConfig, loadAppConfigs, loadSecondaryAppConfigs, Layout, AppSettings, SecondaryAppConfig } from "./config";
+import { AppSettings, Layout, loadAppConfigs, loadGeneralConfig, loadSecondaryAppConfigs } from "./config";
 import { AppWindows, ClientWithMaybeSecondaryConfig, WindowConfig, WindowType } from "./types";
 // Interactive console (for development): plasma-interactiveconsole --kwin
 // View interactive console logs (since the ones in the application are broken on plasma): journalctl -g "js:" -f
@@ -428,39 +428,11 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | ClientWith
     const caption = client.caption;
     const windowClass = client.resourceClass.toString().toLowerCase();
 
-    for (const app in appConfigs) {
-        const config = appConfigs[app];
 
-        const matchesPrimary = config.primary.test(caption);
-        const matchesSecondary = config.secondary.test(caption);
-        const matches = config.classes.some((wc) => { return windowClass.toLowerCase().includes(wc.toLowerCase()); });
-
-        if (matches) {
-            const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));
-            if (blacklisted) {
-                client.fullScreen = false;
-                client.minimized = true;
-
-                print(caption, 'blacklisted by:', config.settings.blacklist);
-
-                return null;
-            }
-
-            const res: WindowConfig = {
-                app: app,
-                type: matchesPrimary ? 'primary'
-                    : matchesSecondary ? 'secondary'
-                        : 'other',
-                settings: config.settings
-            };
-
-            print("matched", caption, "with", res.app, "priority", res.type);
-            return res;
-        }
-    }
 
     for (const secondaryAppConfig of secondaryAppConfigs) {
-        // test secondary app
+        // test secondary apps first, since they don't
+        // have other windows thay may accidentally match
 
         const matchesPrimary = secondaryAppConfig.primary.test(caption);
         const matches = secondaryAppConfig.classes.some((wc) => { return windowClass.includes(wc.toLowerCase()); });
@@ -492,6 +464,68 @@ function getWindowConfig(client: KWin.AbstractClient): WindowConfig | ClientWith
         }
     }
 
+
+    for (const app in appConfigs) {
+        // match primaries first, to avoid false positives with "other"
+        // windows in the same window class. Mostly an issue with Cemu (Proton)
+        // and other Proton games.
+        const config = appConfigs[app];
+
+        const matchesPrimary = config.primary.test(caption);
+        const matches = config.classes.some((wc) => { return windowClass.toLowerCase().includes(wc.toLowerCase()); });
+
+        if (matches && matchesPrimary) {
+            const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));
+            if (blacklisted) {
+                client.fullScreen = false;
+                client.minimized = true;
+
+                print(caption, 'blacklisted by:', config.settings.blacklist);
+
+                return null;
+            }
+
+            const res: WindowConfig = {
+                app: app,
+                type: 'primary',
+                settings: config.settings
+            };
+
+            print("matched", caption, "with", res.app, "priority", res.type);
+            return res;
+        }
+    }
+
+    for (const app in appConfigs) {
+        // Match secondary + other windows
+        const config = appConfigs[app];
+
+        const matchesSecondary = config.secondary.test(caption);
+        const matches = config.classes.some((wc) => { return windowClass.toLowerCase().includes(wc.toLowerCase()); });
+
+        if (matches) {
+            const blacklisted = config.settings.blacklist?.some((rxp) => rxp.test(caption));
+            if (blacklisted) {
+                client.fullScreen = false;
+                client.minimized = true;
+
+                print(caption, 'blacklisted by:', config.settings.blacklist);
+
+                return null;
+            }
+
+            const res: WindowConfig = {
+                app: app,
+                type: matchesSecondary ? 'secondary'
+                    : 'other',
+                settings: config.settings
+            };
+
+            print("matched", caption, "with", res.app, "priority", res.type);
+            return res;
+        }
+    }
+
     print(client.caption, 'with class', windowClass, 'not matched; ignoring');
 
     unmanagedClients.add(client);
@@ -508,13 +542,7 @@ function handleClient(client: KWin.AbstractClient): void {
     const windowConfig = getWindowConfig(client);
 
     if (windowConfig) {
-        if (!oldSettings[client.windowId]) {
-            oldSettings[client.windowId] = {
-                frameGeometry: client.frameGeometry,
-                fullScreen: client.fullScreen,
-                keepAbove: client.keepAbove,
-            }
-        }
+        saveSettings(client);
     }
 
     if (isWindowConfig(windowConfig)) {
@@ -586,6 +614,16 @@ function inRemoveWindow(forRemove: boolean) {
     return tooClose;
 }
 
+function saveSettings(client: KWin.AbstractClient) {
+    if (!oldSettings[client.windowId]) {
+        oldSettings[client.windowId] = {
+            frameGeometry: client.frameGeometry,
+            fullScreen: client.fullScreen,
+            keepAbove: client.keepAbove,
+        }
+    }
+}
+
 // taken from https://github.com/wsdfhjxc/kwin-scripts/blob/master/experimental/experimental.js
 function delay(milliseconds: number, callbackFunc: () => void) {
     var timer = new QTimer();
@@ -603,20 +641,24 @@ workspace.clientAdded.connect((client) => {
     if (!(client.windowId in oldSettings)) {
         const config = getWindowConfig(client);
 
-        if (isWindowConfig(config)) {
-            if (config.type === 'primary') {
-                // ideally, we would also fullscreen here,
-                // but Citra breaks badly, and it may not actually
-                // be the desired user behavior.
-                workspace.sendClientToScreen(client, primaryDisplay);
-            }
-        } else {
-            workspace.sendClientToScreen(client, secondaryDisplay);
+        for (const delayTime of [200, 1000, 5000]) {
+            delay(delayTime, () => {
+                if (isWindowConfig(config)) {
+                    if (config.type === 'primary') {
+                        // ideally, we would also fullscreen here,
+                        // but Citra breaks badly, and it may not actually
+                        // be the desired user behavior.
+                        workspace.sendClientToScreen(client, primaryDisplay);
+                    }
+                } else {
+                    workspace.sendClientToScreen(client, secondaryDisplay);
+                }
+            });
         }
-
     }
-    setScreensOnDelay([200]);
+    setScreens()
 });
+
 workspace.clientRemoved.connect((client) => {
     if (client.windowId in oldSettings) {
         // reset client; things will break otherwise
