@@ -75,7 +75,7 @@ export function loadGeneralConfig(): GeneralConfig {
 export function loadKeyboardConfigs(): KeyboardConfig[] {
     return [
         {
-            primary: /Steam Keyboard/,
+            primary: /Steam(.*)Keyboard/,
             classes: ['steam'],
         },
     ];

@@ -3,6 +3,7 @@ import {
     Layout,
     loadAppConfigs,
     loadGeneralConfig,
+    loadKeyboardConfigs,
     loadSecondaryAppConfigs,
 } from './config';
 import {
@@ -33,13 +34,20 @@ let secondaryAppClients: {
 } = {};
 let unmanagedClients: Set<KWin.AbstractClient> = new Set();
 
-const oldSettings: {
+interface SettingsCache {
     [k: number]: {
         frameGeometry: QRect;
         fullScreen: boolean;
         keepAbove: boolean;
+        keepBelow: boolean;
     };
-} = {};
+}
+
+/// settings before interacting with the script
+const originalSettings: SettingsCache = {};
+
+/// settings before being sent to background to accomodate keyboard
+const tmpSettings: SettingsCache = {};
 
 let primaryFullScreen = false;
 let oldPrimaryFullScreen = false;
@@ -134,11 +142,14 @@ setScreens();
 
 // Script logic
 
-function resetClient(client: KWin.AbstractClient) {
-    const oldClient = oldSettings[client.windowId];
-    client.frameGeometry = oldClient.frameGeometry;
-    client.fullScreen = oldClient.fullScreen;
-    client.keepAbove = oldClient.keepAbove;
+function resetClient(client: KWin.AbstractClient, cache: SettingsCache) {
+    const oldClient = cache[client.windowId];
+    if (oldClient) {
+        client.frameGeometry = oldClient.frameGeometry;
+        client.fullScreen = oldClient.fullScreen;
+        client.keepAbove = oldClient.keepAbove;
+        client.keepBelow = oldClient.keepBelow;
+    }
 }
 
 function assertWindowsValid(windows: AppWindows) {
@@ -534,7 +545,7 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
                             );
                             client.client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
                         } else {
-                            resetClient(client.client); // reset the geometry
+                            resetClient(client.client, originalSettings); // reset the geometry
                             client.client.fullScreen = false;
                             client.client.keepAbove = false;
                         }
@@ -688,7 +699,7 @@ function handleClient(client: KWin.AbstractClient): void {
     const windowConfig = getWindowConfig(client);
 
     if (windowConfig) {
-        saveSettings(client);
+        saveSettings(client, originalSettings);
     }
 
     if (isWindowConfig(windowConfig)) {
@@ -771,12 +782,13 @@ function inRemoveWindow(forRemove: boolean) {
     return tooClose;
 }
 
-function saveSettings(client: KWin.AbstractClient) {
-    if (!oldSettings[client.windowId]) {
-        oldSettings[client.windowId] = {
+function saveSettings(client: KWin.AbstractClient, cache: SettingsCache) {
+    if (!cache[client.windowId]) {
+        cache[client.windowId] = {
             frameGeometry: client.frameGeometry,
             fullScreen: client.fullScreen,
             keepAbove: client.keepAbove,
+            keepBelow: client.keepBelow,
         };
     }
 }
@@ -792,10 +804,83 @@ function delay(milliseconds: number, callbackFunc: () => void) {
     return timer;
 }
 
+function setScreensOnDelay(delays: number[]) {
+    for (const delayTime of delays) {
+        delay(delayTime, () => setScreens());
+    }
+}
+
+function matchesKeyboard(client: KWin.AbstractClient): boolean {
+    const keyboards = loadKeyboardConfigs();
+
+    return !!keyboards.find(
+        (k) =>
+            k.primary.test(client.caption) &&
+            k.classes.find((c) =>
+                c
+                    .toString()
+                    .toLowerCase()
+                    .includes(client.resourceClass.toString().toLowerCase()),
+            ),
+    );
+}
+
+function backgroundAllForKeyboard() {
+    const clients = flattenedClients();
+    console.log(
+        'sending',
+        clients.length,
+        'clients to background for keyboard',
+    );
+
+    for (const client of clients) {
+        saveSettings(client, tmpSettings);
+        client.keepAbove = false;
+        client.keepBelow = true;
+    }
+}
+
+function restoreAllFromKeyboard() {
+    const clients = flattenedClients();
+
+    console.log(
+        'restoring',
+        clients.length,
+        'clients from background from keyboard',
+    );
+    for (const client of clients) {
+        resetClient(client, tmpSettings);
+        delete tmpSettings[client.windowId];
+    }
+}
+
+function flattenedClients(): KWin.AbstractClient[] {
+    const clients = Array.from(unmanagedClients);
+
+    for (const key in secondaryAppClients) {
+        const w = secondaryAppClients[key];
+        clients.push(w.client);
+    }
+
+    for (const key in normalClients) {
+        const w = normalClients[key];
+        clients.push(...w.other);
+        clients.push(...w.secondary);
+        clients.push(...w.primary);
+    }
+
+    return clients;
+}
+
 let removeId = 0;
 
 workspace.clientAdded.connect((client) => {
-    if (!(client.windowId in oldSettings)) {
+    if (matchesKeyboard(client)) {
+        backgroundAllForKeyboard();
+        return;
+    }
+
+    if (!(client.windowId in originalSettings)) {
         const config = getWindowConfig(client);
 
         for (const delayTime of [200, 1000, 5000]) {
@@ -817,10 +902,15 @@ workspace.clientAdded.connect((client) => {
 });
 
 workspace.clientRemoved.connect((client) => {
-    if (client.windowId in oldSettings) {
+    if (matchesKeyboard(client)) {
+        restoreAllFromKeyboard();
+        return;
+    }
+
+    if (client.windowId in originalSettings) {
         // reset client; things will break otherwise
-        resetClient(client);
-        delete oldSettings[client.windowId];
+        resetClient(client, originalSettings);
+        delete originalSettings[client.windowId];
 
         // reconfigure remaining windows
         const config = getWindowConfig(client);
@@ -884,12 +974,6 @@ workspace.clientRemoved.connect((client) => {
         }
     }
 });
-
-function setScreensOnDelay(delays: number[]) {
-    for (const delayTime of delays) {
-        delay(delayTime, () => setScreens());
-    }
-}
 
 workspace.numberScreensChanged.connect((count) => {
     screenCount = count;
