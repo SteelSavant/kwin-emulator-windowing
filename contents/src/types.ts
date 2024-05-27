@@ -1,21 +1,18 @@
-import { AppSettings, SecondaryAppConfig } from "./config";
+import { AppSettings, SecondaryAppConfig } from './config';
 
 export type AppWindows = {
-    [key in WindowType]: KWin.AbstractClient[]
-}
+    [key in WindowType]: KWin.AbstractClient[];
+};
 
-export type WindowType =
-    'primary'
-    | 'secondary'
-    | 'other';
+export type WindowType = 'primary' | 'secondary' | 'other';
 
 export interface WindowConfig {
-    app: string,
-    type: WindowType,
-    settings: AppSettings,
+    app: string;
+    type: WindowType;
+    settings: AppSettings;
 }
 
 export interface ClientWithMaybeSecondaryConfig {
-    client: KWin.AbstractClient,
-    secondaryConfig?: SecondaryAppConfig,
+    client: KWin.AbstractClient;
+    secondaryConfig?: SecondaryAppConfig;
 }
