@@ -23,6 +23,12 @@ print('!!!EMULATOR_WINDOWING_KWINSCRIPT!!!');
 
 // Globals
 
+let globalMarker = 0;
+
+function nextMarker() {
+    globalMarker = (globalMarker + 1) % 1024;
+    return globalMarker;
+}
 let screenCount = workspace.numScreens;
 
 let primaryDisplay = 0;
@@ -58,24 +64,28 @@ const generalConfig = loadGeneralConfig();
 const appConfigs = loadAppConfigs();
 const secondaryAppConfigs = loadSecondaryAppConfigs();
 
-function setScreens() {
+function setScreens(marker: number) {
+    if (marker != globalMarker) {
+        return;
+    }
+
     print('Configuring screens');
 
     for (let i = 0; i < screenCount; i++) {
         const currentScreen = i;
 
         const currentDimensions = workspace.clientArea(
-            KWin.MaximizeArea,
+            KWin.FullScreenArea,
             currentScreen,
             1,
         );
         const primaryDimensions = workspace.clientArea(
-            KWin.MaximizeArea,
+            KWin.FullScreenArea,
             primaryDisplay,
             1,
         );
         const secondaryDimensions = workspace.clientArea(
-            KWin.MaximizeArea,
+            KWin.FullScreenArea,
             secondaryDisplay,
             1,
         );
@@ -106,13 +116,13 @@ function setScreens() {
         'primary display: ',
         primaryDisplay,
         ', geometry: ',
-        workspace.clientArea(KWin.MaximizeArea, primaryDisplay, 1),
+        workspace.clientArea(KWin.FullScreenArea, primaryDisplay, 1),
     );
     print(
         'secondary display: ',
         secondaryDisplay,
         ', geometry: ',
-        workspace.clientArea(KWin.MaximizeArea, secondaryDisplay, 1),
+        workspace.clientArea(KWin.FullScreenArea, secondaryDisplay, 1),
     );
 
     normalClients = {};
@@ -121,7 +131,7 @@ function setScreens() {
 
     const clients = workspace.clientList();
     for (const client of clients) {
-        handleClient(client);
+        handleClient(client, marker);
     }
 
     for (const app in normalClients) {
@@ -134,11 +144,10 @@ function setScreens() {
                 settings: appConfigs[app].settings,
             },
             windows,
+            marker,
         );
     }
 }
-
-setScreens();
 
 // Script logic
 
@@ -164,20 +173,17 @@ function assertWindowsValid(windows: AppWindows) {
     }
 }
 
-function isStandardAspectRatio(geometry: QRect) {
-    const ratio = geometry.width / geometry.height;
-    const common = [16 / 9, 16 / 10, 4 / 3, 21 / 9];
-    return common.some(function (r) {
-        return Math.abs(r - ratio) < 0.001;
-    });
-}
-
 function clientSetFullscreenOn(
     client: KWin.AbstractClient,
     settings: AppSettings,
     index: number,
     secondaryCount: number,
+    marker: number,
 ) {
+    if (marker != globalMarker) {
+        return;
+    }
+
     let layout: Layout =
         screenCount === 1
             ? settings.singleScreenLayout
@@ -187,10 +193,8 @@ function clientSetFullscreenOn(
               settings.multiScreenSingleSecondaryLayout;
 
     // save old settings; failing to re-apply them breaks things (specifically Cemu)
-    const [screen, otherScreen] =
-        index === 0 || layout != 'separate'
-            ? [primaryDisplay, secondaryDisplay]
-            : [secondaryDisplay, primaryDisplay];
+    const screen =
+        index === 0 || layout != 'separate' ? primaryDisplay : secondaryDisplay;
     print(
         'setting client',
         client.caption,
@@ -206,22 +210,10 @@ function clientSetFullscreenOn(
     );
 
     const geometry = workspace.clientArea(
-        KWin.ScreenArea,
+        KWin.FullScreenArea,
         screen,
         workspace.currentDesktop,
     );
-
-    const otherGeometry = workspace.clientArea(
-        KWin.ScreenArea,
-        otherScreen,
-        workspace.currentDesktop,
-    );
-    const diff =
-        workspace.workspaceHeight - geometry.height - otherGeometry.height;
-    if (diff > 0.1 && !isStandardAspectRatio(geometry)) {
-        print('adding', diff, 'to height to compensate for safe area');
-        geometry.height += diff;
-    }
 
     // swap layout engine where possible to simplify logic
 
@@ -354,8 +346,6 @@ function clientSetFullscreenOn(
             throw 'unhandled layout: ' + layout;
     }
 
-    client.setMaximize(false, false);
-
     /// fullscreen settings
     if (index !== 0) {
         client.minimized = false;
@@ -381,6 +371,10 @@ function clientSetFullscreenOn(
 
     if (settings.delayReconfigure) {
         delay(100, () => {
+            if (marker != globalMarker) {
+                return;
+            }
+
             workspace.sendClientToScreen(client, screen);
         });
     } else {
@@ -422,7 +416,15 @@ function printWindows(app: string, windows: AppWindows): void {
     );
 }
 
-function setClientWindows(config: WindowConfig, windows: AppWindows) {
+function setClientWindows(
+    config: WindowConfig,
+    windows: AppWindows,
+    marker: number,
+) {
+    if (marker != globalMarker) {
+        return;
+    }
+
     print('setting client windows for app', config.app);
 
     const app = config.app;
@@ -525,6 +527,7 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
                 primarySettings,
                 0,
                 sharedPrimaries.length,
+                marker,
             );
 
             for (const { settings, secondaries } of [
@@ -542,6 +545,7 @@ function setClientWindows(config: WindowConfig, windows: AppWindows) {
                                 settings,
                                 index,
                                 secondaries.length,
+                                marker,
                             );
                             client.client.fullScreen = true; // if the region is Full, fullscreen won't get set, so we do it manually
                         } else {
@@ -695,7 +699,7 @@ function isWindowConfig(config: any): config is WindowConfig {
     return !!config?.settings;
 }
 
-function handleClient(client: KWin.AbstractClient): void {
+function handleClient(client: KWin.AbstractClient, marker: number): void {
     const windowConfig = getWindowConfig(client);
 
     if (windowConfig) {
@@ -704,8 +708,8 @@ function handleClient(client: KWin.AbstractClient): void {
 
     if (isWindowConfig(windowConfig)) {
         if (windowConfig?.settings.watchCaption) {
-            client.captionChanged.disconnect(setScreens);
-            client.captionChanged.connect(setScreens);
+            client.captionChanged.disconnect(() => setScreens(globalMarker));
+            client.captionChanged.connect(() => setScreens(globalMarker));
         }
 
         if (client.normalWindow) {
@@ -735,7 +739,11 @@ function handleClient(client: KWin.AbstractClient): void {
                                 'now fullscreen:',
                                 client.fullScreen,
                             );
-                            setClientWindows(windowConfig, normalClients[app]);
+                            setClientWindows(
+                                windowConfig,
+                                normalClients[app],
+                                marker,
+                            );
                         }
                     }
                 });
@@ -804,9 +812,9 @@ function delay(milliseconds: number, callbackFunc: () => void) {
     return timer;
 }
 
-function setScreensOnDelay(delays: number[]) {
+function setScreensOnDelay(delays: number[], marker: number) {
     for (const delayTime of delays) {
-        delay(delayTime, () => setScreens());
+        delay(delayTime, () => setScreens(marker));
     }
 }
 
@@ -883,33 +891,34 @@ workspace.clientAdded.connect((client) => {
     if (!(client.windowId in originalSettings)) {
         const config = getWindowConfig(client);
 
-        for (const delayTime of [200, 1000, 5000]) {
-            delay(delayTime, () => {
-                if (isWindowConfig(config)) {
-                    if (config.type === 'primary') {
-                        // ideally, we would also fullscreen here,
-                        // but Citra breaks badly, and it may not actually
-                        // be the desired user behavior.
-                        workspace.sendClientToScreen(client, primaryDisplay);
-                    }
-                } else {
-                    workspace.sendClientToScreen(client, secondaryDisplay);
-                }
-            });
+        if (isWindowConfig(config)) {
+            if (config.type === 'primary') {
+                // ideally, we would also fullscreen here,
+                // but Citra breaks badly, and it may not actually
+                // be the desired user behavior.
+                workspace.sendClientToScreen(client, primaryDisplay);
+            }
+        } else {
+            workspace.sendClientToScreen(client, secondaryDisplay);
         }
     }
-    setScreens();
+    setScreens(globalMarker);
 });
 
 workspace.clientRemoved.connect((client) => {
+    const marker = nextMarker();
+
     if (matchesKeyboard(client)) {
         restoreAllFromKeyboard();
         return;
     }
 
+    // Remove from unmanaged clients list
+    unmanagedClients.delete(client);
+
     if (client.windowId in originalSettings) {
-        // reset client; things will break otherwise
-        resetClient(client, originalSettings);
+        // // reset client; things will break otherwise
+        // resetClient(client, originalSettings);
         delete originalSettings[client.windowId];
 
         // reconfigure remaining windows
@@ -957,7 +966,8 @@ workspace.clientRemoved.connect((client) => {
             normalClients[name] = windows;
             // print(client.caption, "removed, remaining:", windows.map((s) => s.map((w) => w.caption)));
             assertWindowsValid(windows);
-            setClientWindows(config, windows);
+
+            setClientWindows(config, windows, marker);
         } else if (config) {
             // config must be secondary app
             print('deleting secondary app client', client.windowId);
@@ -968,7 +978,7 @@ workspace.clientRemoved.connect((client) => {
                     config.secondaryConfig?.windowingBehavior === 'Fullscreen'
                 ) {
                     print('resetting screens after removing client');
-                    setScreensOnDelay([200]);
+                    setScreensOnDelay([200], marker);
                 }
             }
         }
@@ -977,11 +987,11 @@ workspace.clientRemoved.connect((client) => {
 
 workspace.numberScreensChanged.connect((count) => {
     screenCount = count;
-    setScreensOnDelay([2000, 5000]);
+    setScreensOnDelay([2000, 5000], nextMarker());
 });
 
 workspace.virtualScreenGeometryChanged.connect(() => {
-    setScreensOnDelay([500, 1000]);
+    setScreensOnDelay([500, 1000], nextMarker());
 });
 
-setScreens();
+setScreens(nextMarker());
