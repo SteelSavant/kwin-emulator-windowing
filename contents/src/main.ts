@@ -742,7 +742,7 @@ function handleClient(client: KWin.AbstractClient, marker: number): void {
                             setClientWindows(
                                 windowConfig,
                                 normalClients[app],
-                                marker,
+                                nextMarker(),
                             );
                         }
                     }
